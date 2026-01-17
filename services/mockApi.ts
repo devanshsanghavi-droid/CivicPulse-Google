@@ -33,8 +33,8 @@ export const calculateTrendingScore = (issue: Issue) => {
 
 export const mockApi = {
   // --- Auth ---
-  login: (email: string, password?: string, role: UserRole = 'resident'): User | null => {
-    // Special check for super admin
+  login: (email: string, password?: string): User | null => {
+    // Hardcoded check for the primary admin account
     if (email === 'notdev42@gmail.com') {
       if (password === 'devansh1234') {
         const adminUser: User = {
@@ -49,11 +49,11 @@ export const mockApi = {
         setStored(STORAGE_KEYS.CURRENT_USER, adminUser);
         return adminUser;
       } else {
-        return null; // Invalid password for this specific user
+        return null; // Invalid password for super admin
       }
     }
 
-    // Generic mock login for others
+    // Generic login for all other users - strictly Resident role
     const users = getStored<User[]>(STORAGE_KEYS.USERS, []);
     let user = users.find(u => u.email === email);
     if (!user) {
@@ -61,7 +61,7 @@ export const mockApi = {
         id: Math.random().toString(36).substr(2, 9),
         name: email.split('@')[0],
         email,
-        role,
+        role: 'resident', // Forced resident role for all other emails
         createdAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
         isBanned: false
