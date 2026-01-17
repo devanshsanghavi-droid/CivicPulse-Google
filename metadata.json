@@ -1,0 +1,8 @@
+{
+  "name": "CivicPulse",
+  "description": "A production-ready city issue reporting platform where residents can report, upvote, and comment on local infrastructure and safety concerns to prioritize city improvements.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
