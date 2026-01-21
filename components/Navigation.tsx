@@ -49,8 +49,14 @@ export default function Navigation() {
     <nav className="flex justify-around md:justify-end items-center px-2 py-1 md:gap-2">
       <NavIcon Icon={Icons.Feed} label="Feed" active={currentScreen === 'feed'} onClick={() => setScreen('feed')} />
       <NavIcon Icon={Icons.Map} label="Map" active={currentScreen === 'map'} onClick={() => setScreen('map')} />
-      <NavIcon Icon={Icons.Plus} label="Report" active={currentScreen === 'report'} onClick={() => setScreen('report')} />
+      
+      {/* Hide Report for non-logged in users */}
+      {user && (
+        <NavIcon Icon={Icons.Plus} label="Report" active={currentScreen === 'report'} onClick={() => setScreen('report')} />
+      )}
+      
       <NavIcon Icon={Icons.User} label="Profile" active={currentScreen === 'profile'} onClick={() => setScreen('profile')} />
+      
       {isAdmin && (
         <NavIcon Icon={Icons.Admin} label="Admin" active={currentScreen === 'admin'} onClick={() => setScreen('admin')} />
       )}

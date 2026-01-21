@@ -1,8 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../App';
 import { CATEGORIES } from '../constants';
 import { mockApi } from '../services/mockApi';
+
+// Declare L for Leaflet global
+declare var L: any;
 
 export default function ReportScreen() {
   const { user, setScreen, setSelectedIssueId } = useApp();
@@ -13,16 +16,59 @@ export default function ReportScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const miniMapContainerRef = useRef<HTMLDivElement>(null);
+  const miniMapInstanceRef = useRef<any>(null);
 
   useEffect(() => {
-    // Attempt to get geolocation on mount
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => console.log("Location denied")
+        () => console.log("Location denied"),
+        { enableHighAccuracy: true }
       );
     }
   }, []);
+
+  // Initialize mini-map when step 3 is reached
+  useEffect(() => {
+    if (step === 3 && miniMapContainerRef.current && location && !miniMapInstanceRef.current) {
+      const map = L.map(miniMapContainerRef.current, {
+        center: [location.lat, location.lng],
+        zoom: 17,
+        zoomControl: false,
+        attributionControl: false,
+        scrollWheelZoom: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        dragging: false
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(map);
+
+      const customIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div class="pulse-marker"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      });
+
+      L.marker([location.lat, location.lng], { icon: customIcon }).addTo(map);
+      miniMapInstanceRef.current = map;
+      
+      // Force redraw
+      setTimeout(() => map.invalidateSize(), 100);
+    }
+
+    return () => {
+      if (miniMapInstanceRef.current) {
+        miniMapInstanceRef.current.remove();
+        miniMapInstanceRef.current = null;
+      }
+    };
+  }, [step, location]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,7 +83,6 @@ export default function ReportScreen() {
     if (!user || !location || !photo) return;
     setIsSubmitting(true);
     
-    // Simulate API delay
     await new Promise(r => setTimeout(r, 1500));
     
     const newIssue = mockApi.createIssue({
@@ -48,7 +93,7 @@ export default function ReportScreen() {
       categoryId,
       latitude: location.lat,
       longitude: location.lng,
-      address: "Analyzed Proximity Location",
+      address: "Verified Community Location",
       photos: [{ id: 'p-' + Date.now(), url: photo }]
     });
 
@@ -175,19 +220,12 @@ export default function ReportScreen() {
             <h3 className="font-black text-sm uppercase tracking-widest mb-2 text-blue-600">Geospatial Confirmation</h3>
             <p className="text-gray-500 text-sm leading-relaxed mb-6">Confirm the exact location of the incident for efficient routing of city resources.</p>
             
-            <div className="h-64 bg-gray-50 rounded-3xl flex items-center justify-center relative overflow-hidden border border-gray-100">
-               {location ? (
-                 <div className="text-center animate-in fade-in zoom-in duration-500">
-                   <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-8 h-8">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                   </div>
-                   <p className="text-[10px] font-black tracking-tighter text-gray-400 uppercase">{location.lat.toFixed(6)} N, {location.lng.toFixed(6)} W</p>
-                   <p className="text-xs mt-2 text-blue-600 font-black uppercase tracking-widest">Geolocation Synchronized</p>
-                 </div>
-               ) : (
-                 <div className="p-8 text-center">
+            <div 
+              ref={miniMapContainerRef}
+              className="h-64 bg-gray-50 rounded-3xl relative overflow-hidden border border-gray-100 shadow-inner"
+            >
+               {!location && (
+                 <div className="absolute inset-0 p-8 text-center flex flex-col items-center justify-center bg-white/80 z-10">
                    <svg className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -202,6 +240,15 @@ export default function ReportScreen() {
                  </div>
                )}
             </div>
+            {location && (
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-[10px] font-black tracking-tighter text-gray-400 uppercase">{location.lat.toFixed(6)} N, {location.lng.toFixed(6)} W</p>
+                <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest flex items-center gap-1">
+                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                   Location Verified
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 flex gap-4 text-xs font-medium text-slate-600">

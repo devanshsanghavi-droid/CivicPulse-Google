@@ -9,6 +9,8 @@ export interface User {
   createdAt: string;
   lastLoginAt: string;
   isBanned: boolean;
+  neighborhood?: string;
+  notifsEnabled?: boolean;
 }
 
 export type IssueStatus = 'open' | 'acknowledged' | 'resolved';
@@ -55,6 +57,17 @@ export interface Comment {
   hidden: boolean;
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'upvote' | 'comment' | 'status_change';
+  issueId: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Report {
   id: string;
   reporterUserId: string;
@@ -81,12 +94,4 @@ export interface DigestSettings {
   scheduleTime: string;
   lookbackDays: number;
   topN: number;
-}
-
-export interface DigestHistory {
-  id: string;
-  sentAt: string;
-  recipientEmails: string;
-  issueIds: string[];
-  status: 'sent' | 'failed';
 }

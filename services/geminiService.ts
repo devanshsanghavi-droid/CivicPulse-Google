@@ -2,7 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Issue } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Fix: Strictly follow initialization guideline for Google GenAI SDK
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const geminiService = {
   /**
@@ -22,6 +23,7 @@ export const geminiService = {
           maxOutputTokens: 500,
         }
       });
+      // Fix: Direct property access for text
       return response.text || "Summary unavailable.";
     } catch (error) {
       console.error("Gemini summary failed:", error);
@@ -52,6 +54,7 @@ export const geminiService = {
           }
         }
       });
+      // Fix: Direct property access for text
       const result = JSON.parse(response.text || '{"isDuplicate": false}');
       return result.isDuplicate;
     } catch {
