@@ -2,6 +2,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { User, Issue, UserRole, Notification } from './types';
 import { mockApi } from './services/mockApi';
+import { onAuthStateChange, convertFirebaseUserToAppUser } from './services/firebaseAuth';
 import LandingScreen from './screens/LandingScreen';
 import FeedScreen from './screens/FeedScreen';
 import MapScreen from './screens/MapScreen';
@@ -49,6 +50,25 @@ export default function App() {
       setNotifs(mockApi.getNotifications(user.id));
     }
   };
+
+  // Listen to Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in with Firebase
+        const appUser = convertFirebaseUserToAppUser(firebaseUser);
+        if (appUser) {
+          setUser(appUser);
+        }
+      } else {
+        // User is signed out
+        setUser(null);
+        mockApi.logout();
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     refreshNotifs();

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { mockApi } from '../services/mockApi';
-import { geminiService } from '../services/geminiService';
+// import { geminiService } from '../services/geminiService'; // Commented out - Gemini API not required
 import { Issue, IssueStatus } from '../types';
 
 export default function AdminDashboardScreen() {
@@ -25,7 +25,20 @@ export default function AdminDashboardScreen() {
   const handleGenerateDigest = async () => {
     setIsGenerating(true);
     const topIssues = [...issues].sort((a, b) => b.upvoteCount - a.upvoteCount).slice(0, 10);
-    const summary = await geminiService.generateWeeklySummary(topIssues);
+    
+    // Gemini API feature commented out - using manual summary instead
+    // const summary = await geminiService.generateWeeklySummary(topIssues);
+    
+    // Generate a simple manual summary
+    const summary = topIssues.length > 0
+      ? `Weekly CivicPulse Infrastructure Briefing\n\n` +
+        `This week, ${topIssues.length} high-priority issues were reported by residents:\n\n` +
+        topIssues.map((issue, idx) => 
+          `${idx + 1}. ${issue.title} - ${issue.description} (${issue.upvoteCount} upvotes, Status: ${issue.status})`
+        ).join('\n\n') +
+        `\n\nThese issues require attention from city maintenance crews.`
+      : 'No significant issues reported this week.';
+    
     setDigestSummary(summary);
     setIsGenerating(false);
   };

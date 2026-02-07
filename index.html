@@ -24,18 +24,23 @@
     }
     @keyframes pulse { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(3.5); opacity: 0; } }
   </style>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0"
-  }
-}
-</script>
 </head>
 <body class="bg-gray-50 text-gray-900 overflow-x-hidden">
-  <div id="root"></div>
+  <div id="root">
+    <div style="padding: 20px; text-align: center;">
+      <p>Loading CivicPulse...</p>
+    </div>
+  </div>
+  <script>
+    console.log('[HTML] Script tag about to load index.tsx');
+    window.addEventListener('error', (e) => {
+      console.error('[HTML] Global error:', e.error, e.filename, e.lineno);
+      const root = document.getElementById('root');
+      if (root) {
+        root.innerHTML = '<div style="padding: 40px; text-align: center; color: #dc2626;"><h1>Script Error</h1><p>' + (e.error?.message || e.message) + '</p><p>File: ' + e.filename + '</p></div>';
+      }
+    });
+  </script>
+  <script type="module" src="/index.tsx"></script>
 </body>
 </html>

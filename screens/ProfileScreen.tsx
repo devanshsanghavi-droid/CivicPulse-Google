@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { mockApi } from '../services/mockApi';
+import { signOutUser } from '../services/firebaseAuth';
 
 export default function ProfileScreen() {
   const { user, setUser, setScreen } = useApp();
@@ -27,10 +28,18 @@ export default function ProfileScreen() {
     );
   }
 
-  const handleLogout = () => {
-    mockApi.logout();
-    setUser(null);
-    setScreen('landing');
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      setUser(null);
+      setScreen('landing');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback to local logout if Firebase signout fails
+      mockApi.logout();
+      setUser(null);
+      setScreen('landing');
+    }
   };
 
   const toggleNotifs = () => {
