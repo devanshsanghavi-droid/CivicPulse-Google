@@ -156,6 +156,22 @@ export default function ProfileScreen() {
             </div>
           )}
 
+          {/* Report a Problem */}
+          <a
+            href="mailto:civicpulsehelpdesk@gmail.com?subject=CivicPulse Support Request&body=Hi CivicPulse Team,%0D%0A%0D%0AI'd like to report an issue with the app:%0D%0A%0D%0A"
+            className="w-full text-left p-5 bg-white border border-gray-100 rounded-2xl flex justify-between items-center group transition-all hover:border-amber-200 hover:shadow-sm"
+          >
+            <div className="flex items-center gap-4">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-gray-400 group-hover:text-amber-500 transition-colors">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              <span className="text-sm font-bold text-gray-700">Report a Problem</span>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-300 group-hover:text-amber-400 transition-colors">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
+
           <button 
             onClick={handleLogout}
             className="w-full text-left p-5 bg-red-50 text-red-600 border border-red-100 rounded-2xl flex justify-between items-center group hover:bg-red-100 transition-colors mt-8"
