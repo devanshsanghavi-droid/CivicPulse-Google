@@ -8,6 +8,7 @@ import {
 import { auth, googleProvider } from "./firebaseConfig";
 import { User } from "../types";
 import { mockApi } from "./mockApi";
+import { firestoreService } from "./firestoreService";
 
 /**
  * Sign in with Google using Firebase
@@ -22,18 +23,21 @@ export const signInWithGoogle = async (): Promise<User> => {
     const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User';
     const photoURL = firebaseUser.photoURL || '';
     
-    // Create or get user in our system
-    // Check if user exists, otherwise create new one
-    const existingUser = mockApi.getCurrentUser();
-    let user: User;
+    // Create or get user in our system (passes photoURL + auto-detects admin)
+    const user = mockApi.signup(email, 'firebase-google-sso', name, photoURL);
     
-    if (existingUser && existingUser.email === email) {
-      // User already exists, update last login
-      user = existingUser;
-      mockApi.updateProfile(user.id, { lastLoginAt: new Date().toISOString() });
-    } else {
-      // Create new user
-      user = mockApi.signup(email, 'firebase-google-sso', name);
+    // Log the login event to Firestore for admin visibility
+    try {
+      await firestoreService.logLogin({
+        userId: user.id,
+        email,
+        name,
+        photoURL,
+        loginAt: new Date().toISOString(),
+        userAgent: navigator.userAgent
+      });
+    } catch (e) {
+      console.warn('Failed to log login event:', e);
     }
     
     return user;
@@ -78,13 +82,18 @@ export const convertFirebaseUserToAppUser = (firebaseUser: FirebaseUser | null):
   
   const email = firebaseUser.email || '';
   const name = firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User';
+  const photoURL = firebaseUser.photoURL || '';
   
   // Try to get existing user from our system
   const existingUser = mockApi.getCurrentUser();
   if (existingUser && existingUser.email === email) {
-    return existingUser;
+    // Always update photo URL and name from Google in case it changed
+    if (photoURL || name) {
+      mockApi.updateProfile(existingUser.id, { photoURL, name });
+    }
+    return { ...existingUser, photoURL, name };
   }
   
-  // Create new user if doesn't exist
-  return mockApi.signup(email, 'firebase-google-sso', name);
+  // Create new user if doesn't exist (passes photoURL + auto-detects admin)
+  return mockApi.signup(email, 'firebase-google-sso', name, photoURL);
 };

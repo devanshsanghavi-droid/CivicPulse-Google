@@ -2,15 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { firestoreService } from '../services/firestoreService';
 // import { geminiService } from '../services/geminiService'; // Commented out - Gemini API not required
-import { Issue, IssueStatus } from '../types';
+import { Issue, IssueStatus, LoginRecord } from '../types';
 
 export default function AdminDashboardScreen() {
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [tab, setTab] = useState<'issues' | 'digest' | 'reports'>('issues');
+  const [tab, setTab] = useState<'issues' | 'digest' | 'reports' | 'details'>('issues');
   const [digestSummary, setDigestSummary] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('cityissues@losaltos.gov');
   const [customTitle, setCustomTitle] = useState('Weekly CivicPulse Infrastructure Briefing');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loginHistory, setLoginHistory] = useState<LoginRecord[]>([]);
+  const [loadingLogins, setLoadingLogins] = useState(false);
 
   useEffect(() => {
     const loadIssues = async () => {
@@ -22,6 +24,22 @@ export default function AdminDashboardScreen() {
     };
     loadIssues();
   }, []);
+
+  useEffect(() => {
+    if (tab === 'details') {
+      const loadLogins = async () => {
+        setLoadingLogins(true);
+        try {
+          setLoginHistory(await firestoreService.getLoginHistory(100));
+        } catch (err) {
+          console.error('Failed to load login history:', err);
+        } finally {
+          setLoadingLogins(false);
+        }
+      };
+      loadLogins();
+    }
+  }, [tab]);
 
   const handleStatusChange = async (id: string, status: IssueStatus) => {
     const note = window.prompt("Add a public status note (optional):");
@@ -64,7 +82,7 @@ export default function AdminDashboardScreen() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-3xl font-black tracking-tight text-gray-900">Admin Operations</h2>
         <div className="flex gap-1 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
-          {(['issues', 'digest', 'reports'] as const).map(t => (
+          {(['issues', 'digest', 'reports', 'details'] as const).map(t => (
             <button 
               key={t}
               onClick={() => setTab(t)}
@@ -239,6 +257,84 @@ export default function AdminDashboardScreen() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6.203c-.099.32-.155.657-.155 1.008 0 5.488 3.99 10.06 9.33 10.815a11.963 11.963 0 0 0 9.33-10.815c0-.351-.056-.688-.155-1.008a11.959 11.959 0 0 1-8.402-4.239Z" />
           </svg>
           <p className="text-sm font-black uppercase tracking-widest text-gray-400">Moderation Queue Empty</p>
+        </div>
+      )}
+
+      {tab === 'details' && (
+        <div className="space-y-8">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white border border-gray-100 p-6 rounded-3xl text-center shadow-sm">
+              <div className="text-3xl font-black text-blue-600 mb-1 tracking-tight">{loginHistory.length}</div>
+              <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Total Logins</div>
+            </div>
+            <div className="bg-white border border-gray-100 p-6 rounded-3xl text-center shadow-sm">
+              <div className="text-3xl font-black text-green-600 mb-1 tracking-tight">
+                {new Set(loginHistory.map(l => l.email)).size}
+              </div>
+              <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Unique Users</div>
+            </div>
+            <div className="bg-white border border-gray-100 p-6 rounded-3xl text-center shadow-sm">
+              <div className="text-3xl font-black text-purple-600 mb-1 tracking-tight">{issues.length}</div>
+              <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Total Reports</div>
+            </div>
+          </div>
+
+          {/* Login History */}
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4">Login History</h3>
+            <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+              {loadingLogins ? (
+                <div className="p-12 text-center flex flex-col items-center">
+                  <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Loading login records...</p>
+                </div>
+              ) : loginHistory.length > 0 ? (
+                <div className="divide-y divide-gray-50">
+                  {loginHistory.map((login) => (
+                    <div key={login.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
+                      {login.photoURL ? (
+                        <img src={login.photoURL} alt={login.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-gray-900 truncate">{login.name}</span>
+                          {login.email.toLowerCase() === 'notdev42@gmail.com' && (
+                            <span className="text-[8px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">Admin</span>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400 font-medium truncate block">{login.email}</span>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-xs font-bold text-gray-600">
+                          {new Date(login.loginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-medium">
+                          {new Date(login.loginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-20 text-center flex flex-col items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-16 h-16 text-gray-100 mb-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                  </svg>
+                  <p className="text-sm font-bold uppercase tracking-widest text-gray-400">No login records yet</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

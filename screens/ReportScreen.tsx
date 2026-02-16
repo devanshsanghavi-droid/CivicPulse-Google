@@ -95,6 +95,7 @@ export default function ReportScreen() {
       const newIssue = await firestoreService.createIssue({
         createdBy: user.id,
         creatorName: user.name,
+        creatorPhotoURL: user.photoURL || '',
         title,
         description,
         categoryId,

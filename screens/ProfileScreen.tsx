@@ -65,11 +65,15 @@ export default function ProfileScreen() {
     <div className="p-8 space-y-12 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-6">
-        <div className="w-24 h-24 bg-blue-50 border border-blue-100 rounded-[2rem] flex items-center justify-center text-blue-600 shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-          </svg>
-        </div>
+        {user.photoURL ? (
+          <img src={user.photoURL} alt={user.name} className="w-24 h-24 rounded-[2rem] object-cover border-2 border-blue-100 shadow-sm" />
+        ) : (
+          <div className="w-24 h-24 bg-blue-50 border border-blue-100 rounded-[2rem] flex items-center justify-center text-blue-600 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+          </div>
+        )}
         <div>
           <h2 className="text-3xl font-black tracking-tight text-gray-900 leading-none mb-2">{user.name}</h2>
           <p className="text-gray-400 font-bold text-sm tracking-tight mb-3">{user.email}</p>

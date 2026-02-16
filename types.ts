@@ -6,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  photoURL?: string;
   createdAt: string;
   lastLoginAt: string;
   isBanned: boolean;
@@ -31,6 +32,7 @@ export interface Issue {
   id: string;
   createdBy: string;
   creatorName: string;
+  creatorPhotoURL?: string;
   title: string;
   description: string;
   categoryId: string;
@@ -51,6 +53,7 @@ export interface Comment {
   issueId: string;
   userId: string;
   userName: string;
+  userPhotoURL?: string;
   body: string;
   createdAt: string;
   updatedAt: string;
@@ -94,4 +97,14 @@ export interface DigestSettings {
   scheduleTime: string;
   lookbackDays: number;
   topN: number;
+}
+
+export interface LoginRecord {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  photoURL?: string;
+  loginAt: string;
+  userAgent: string;
 }

@@ -6,7 +6,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebaseConfig';
-import { Issue, Comment, Upvote, IssueStatus, IssuePhoto } from '../types';
+import { Issue, Comment, Upvote, IssueStatus, IssuePhoto, LoginRecord } from '../types';
 import { TRENDING_WEIGHT_UPVOTES, TRENDING_RECENCY_DAYS } from '../constants';
 
 // Shared trending score calculation
@@ -63,6 +63,7 @@ export const firestoreService = {
     const issueData = {
       createdBy: data.createdBy!,
       creatorName: data.creatorName || 'Resident',
+      creatorPhotoURL: data.creatorPhotoURL || '',
       title: data.title!,
       description: data.description!,
       categoryId: data.categoryId!,
@@ -147,12 +148,14 @@ export const firestoreService = {
     issueId: string,
     userId: string,
     userName: string,
-    body: string
+    body: string,
+    userPhotoURL?: string
   ): Promise<Comment> => {
     const commentData = {
       issueId,
       userId,
       userName,
+      userPhotoURL: userPhotoURL || '',
       body,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -183,5 +186,18 @@ export const firestoreService = {
         .filter(i => !i.hidden);
       callback(issues);
     });
+  },
+
+  // ─── Login Tracking (for admin dashboard) ──────────────────────
+  logLogin: async (data: Omit<LoginRecord, 'id'>): Promise<void> => {
+    await addDoc(collection(db, 'logins'), data);
+  },
+
+  getLoginHistory: async (limit: number = 50): Promise<LoginRecord[]> => {
+    const snapshot = await getDocs(collection(db, 'logins'));
+    return snapshot.docs
+      .map(d => ({ ...d.data(), id: d.id } as LoginRecord))
+      .sort((a, b) => new Date(b.loginAt).getTime() - new Date(a.loginAt).getTime())
+      .slice(0, limit);
   }
 };

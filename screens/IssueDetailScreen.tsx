@@ -58,7 +58,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
   const handleComment = async () => {
     if (!user || !newComment.trim()) return;
     try {
-      await firestoreService.addComment(id, user.id, user.name, newComment.trim());
+      await firestoreService.addComment(id, user.id, user.name, newComment.trim(), user.photoURL);
       const updatedComments = await firestoreService.getComments(id);
       setComments(updatedComments);
       setNewComment('');
@@ -114,6 +114,23 @@ export default function IssueDetailScreen({ id }: { id: string }) {
           </div>
         </div>
 
+        {/* Reporter Info */}
+        <div className="flex items-center gap-3 mb-6">
+          {issue.creatorPhotoURL ? (
+            <img src={issue.creatorPhotoURL} alt={issue.creatorName} className="w-10 h-10 rounded-full object-cover border-2 border-gray-100 shadow-sm" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
+            </div>
+          )}
+          <div>
+            <span className="text-sm font-bold text-gray-900">{issue.creatorName}</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-2">Reporter</span>
+          </div>
+        </div>
+
         <p className="text-gray-600 mb-8 leading-relaxed text-lg">{issue.description}</p>
 
         <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100 flex items-center justify-between group">
@@ -155,11 +172,15 @@ export default function IssueDetailScreen({ id }: { id: string }) {
           <div className="space-y-6 mb-10">
             {comments.map(comment => (
               <div key={comment.id} className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                  </svg>
-                </div>
+                {comment.userPhotoURL ? (
+                  <img src={comment.userPhotoURL} alt={comment.userName} className="w-10 h-10 rounded-full object-cover border border-gray-200 flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                  </div>
+                )}
                 <div className="bg-gray-50 p-4 rounded-2xl flex-1 text-sm border border-gray-100">
                   <div className="flex justify-between mb-2">
                     <span className="font-black text-gray-900">{comment.userName}</span>

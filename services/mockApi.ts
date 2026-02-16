@@ -63,16 +63,22 @@ export const mockApi = {
     return null;
   },
 
-  signup: (email: string, password?: string, name?: string): User => {
+  signup: (email: string, password?: string, name?: string, photoURL?: string): User => {
     const users = getStored<StoredUser[]>(STORAGE_KEYS.USERS, []);
     let user = users.find(u => u.email === email);
+    
+    // Determine role: super_admin for notdev42@gmail.com, resident for everyone else
+    const isAdmin = email.toLowerCase() === 'notdev42@gmail.com';
+    const role: UserRole = isAdmin ? 'super_admin' : 'resident';
+    
     if (!user) {
       const newUser: StoredUser = {
         id: Math.random().toString(36).substr(2, 9),
         name: name || email.split('@')[0],
         email,
         password,
-        role: 'resident',
+        role,
+        photoURL: photoURL || '',
         createdAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
         isBanned: false,
@@ -81,6 +87,15 @@ export const mockApi = {
       users.push(newUser);
       setStored(STORAGE_KEYS.USERS, users);
       user = newUser;
+    } else {
+      // Update existing user with latest photo, name, and role if admin
+      user.photoURL = photoURL || user.photoURL || '';
+      user.name = name || user.name;
+      user.lastLoginAt = new Date().toISOString();
+      if (isAdmin) user.role = 'super_admin';
+      const idx = users.findIndex(u => u.id === user!.id);
+      if (idx !== -1) users[idx] = user;
+      setStored(STORAGE_KEYS.USERS, users);
     }
     const { password: _, ...userSession } = user;
     setStored(STORAGE_KEYS.CURRENT_USER, userSession);
