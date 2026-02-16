@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { mockApi } from '../services/mockApi';
+import { firestoreService } from '../services/firestoreService';
 import { signOutUser } from '../services/firebaseAuth';
 
 export default function ProfileScreen() {
@@ -11,9 +12,16 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'settings' | 'registry'>('settings');
 
   useEffect(() => {
-    if (user) {
-      setStats(mockApi.getUserStats(user.id));
-    }
+    const loadStats = async () => {
+      if (user) {
+        try {
+          setStats(await firestoreService.getUserStats(user.id));
+        } catch (err) {
+          console.error('Failed to load user stats:', err);
+        }
+      }
+    };
+    loadStats();
   }, [user]);
 
   if (!user) {

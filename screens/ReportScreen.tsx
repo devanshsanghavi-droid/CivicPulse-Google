@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../App';
 import { CATEGORIES } from '../constants';
-import { mockApi } from '../services/mockApi';
+import { firestoreService } from '../services/firestoreService';
 
 // Declare L for Leaflet global
 declare var L: any;
@@ -11,11 +11,13 @@ export default function ReportScreen() {
   const { user, setScreen, setSelectedIssueId } = useApp();
   const [step, setStep] = useState(1);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const miniMapContainerRef = useRef<HTMLDivElement>(null);
   const miniMapInstanceRef = useRef<any>(null);
 
@@ -73,6 +75,7 @@ export default function ReportScreen() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPhotoFile(file); // Keep file reference for upload to Firebase Storage
       const reader = new FileReader();
       reader.onloadend = () => setPhoto(reader.result as string);
       reader.readAsDataURL(file);
@@ -80,25 +83,34 @@ export default function ReportScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!user || !location || !photo) return;
+    if (!user || !location || !photo || !photoFile) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     
-    await new Promise(r => setTimeout(r, 1500));
-    
-    const newIssue = mockApi.createIssue({
-      createdBy: user.id,
-      creatorName: user.name,
-      title,
-      description,
-      categoryId,
-      latitude: location.lat,
-      longitude: location.lng,
-      address: "Verified Community Location",
-      photos: [{ id: 'p-' + Date.now(), url: photo }]
-    });
+    try {
+      // 1. Upload photo to Firebase Storage
+      const photoUrl = await firestoreService.uploadPhoto(photoFile);
+      
+      // 2. Create issue in Firestore (shared with all users)
+      const newIssue = await firestoreService.createIssue({
+        createdBy: user.id,
+        creatorName: user.name,
+        title,
+        description,
+        categoryId,
+        latitude: location.lat,
+        longitude: location.lng,
+        address: "Verified Community Location",
+        photos: [{ id: 'p-' + Date.now(), url: photoUrl }]
+      });
 
-    setSelectedIssueId(newIssue.id);
-    setScreen('issue-detail');
+      setSelectedIssueId(newIssue.id);
+      setScreen('issue-detail');
+    } catch (err: any) {
+      console.error('Failed to submit report:', err);
+      setSubmitError(err.message || 'Failed to submit report. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   const Progress = () => (
@@ -258,6 +270,12 @@ export default function ReportScreen() {
             <p className="leading-relaxed">Telemetry data is strictly utilized for routing municipal service crews and remains confidential within city operations.</p>
           </div>
 
+          {submitError && (
+            <div className="p-4 bg-red-50 text-red-600 text-xs font-bold rounded-2xl border border-red-100">
+              {submitError}
+            </div>
+          )}
+
           <div className="flex gap-4 mt-auto">
             <button 
               onClick={() => setStep(2)} 
@@ -270,7 +288,7 @@ export default function ReportScreen() {
               onClick={handleSubmit}
               className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest disabled:opacity-50 shadow-xl shadow-blue-100 hover:bg-blue-700 transition-colors"
             >
-              {isSubmitting ? 'Processing Submission...' : 'Transmit Report'}
+              {isSubmitting ? 'Uploading & Saving...' : 'Transmit Report'}
             </button>
           </div>
         </div>

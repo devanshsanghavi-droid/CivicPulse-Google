@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { mockApi } from '../services/mockApi';
+import { firestoreService } from '../services/firestoreService';
 import { Issue } from '../types';
 import { CATEGORIES } from '../constants';
 import { useApp } from '../App';
@@ -24,14 +24,28 @@ export default function FeedScreen() {
   const [sort, setSort] = useState('trending');
   const [filterCat, setFilterCat] = useState<string | undefined>();
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const data = mockApi.getIssues(sort, filterCat);
-    const filtered = data.filter(i => 
-      i.title.toLowerCase().includes(search.toLowerCase()) || 
-      i.description.toLowerCase().includes(search.toLowerCase())
-    );
-    setIssues(filtered);
+    let cancelled = false;
+    const loadIssues = async () => {
+      setLoading(true);
+      try {
+        const data = await firestoreService.getIssues(sort, filterCat);
+        if (cancelled) return;
+        const filtered = data.filter(i => 
+          i.title.toLowerCase().includes(search.toLowerCase()) || 
+          i.description.toLowerCase().includes(search.toLowerCase())
+        );
+        setIssues(filtered);
+      } catch (err) {
+        console.error('Failed to load issues:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadIssues();
+    return () => { cancelled = true; };
   }, [sort, filterCat, search]);
 
   return (
@@ -137,7 +151,17 @@ export default function FeedScreen() {
         ))}
       </div>
       
-      {issues.length === 0 && (
+      {loading && (
+        <div className="text-center py-40 flex flex-col items-center">
+          <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading reports...</p>
+        </div>
+      )}
+
+      {!loading && issues.length === 0 && (
         <div className="text-center py-40 text-gray-400 flex flex-col items-center">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 mb-4 opacity-20">
             <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../App';
-import { mockApi } from '../services/mockApi';
+import { firestoreService } from '../services/firestoreService';
 import { Issue } from '../types';
 import { CATEGORIES } from '../constants';
 
@@ -16,7 +16,15 @@ export default function MapScreen() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    setIssues(mockApi.getIssues());
+    const loadIssues = async () => {
+      try {
+        const data = await firestoreService.getIssues();
+        setIssues(data);
+      } catch (err) {
+        console.error('Failed to load issues for map:', err);
+      }
+    };
+    loadIssues();
   }, []);
 
   useEffect(() => {

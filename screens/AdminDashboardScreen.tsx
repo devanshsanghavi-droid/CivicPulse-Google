@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { mockApi } from '../services/mockApi';
+import { firestoreService } from '../services/firestoreService';
 // import { geminiService } from '../services/geminiService'; // Commented out - Gemini API not required
 import { Issue, IssueStatus } from '../types';
 
@@ -13,13 +13,24 @@ export default function AdminDashboardScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    setIssues(mockApi.getIssues('newest'));
+    const loadIssues = async () => {
+      try {
+        setIssues(await firestoreService.getIssues('newest'));
+      } catch (err) {
+        console.error('Failed to load issues:', err);
+      }
+    };
+    loadIssues();
   }, []);
 
-  const handleStatusChange = (id: string, status: IssueStatus) => {
+  const handleStatusChange = async (id: string, status: IssueStatus) => {
     const note = window.prompt("Add a public status note (optional):");
-    mockApi.updateIssueStatus(id, status, note || undefined);
-    setIssues(mockApi.getIssues('newest'));
+    try {
+      await firestoreService.updateIssueStatus(id, status, note || undefined);
+      setIssues(await firestoreService.getIssues('newest'));
+    } catch (err) {
+      console.error('Failed to update issue status:', err);
+    }
   };
 
   const handleGenerateDigest = async () => {

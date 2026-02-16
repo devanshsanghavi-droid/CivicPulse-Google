@@ -1,38 +1,81 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
-import { mockApi } from '../services/mockApi';
+import { firestoreService } from '../services/firestoreService';
 import { Issue, Comment } from '../types';
 import { CATEGORIES } from '../constants';
 
 export default function IssueDetailScreen({ id }: { id: string }) {
   const { user, setScreen } = useApp();
-  const [issue, setIssue] = useState<Issue | undefined>(mockApi.getIssue(id));
+  const [issue, setIssue] = useState<Issue | undefined>(undefined);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [hasUpvoted, setHasUpvoted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      setIssue(mockApi.getIssue(id));
-      setComments(mockApi.getComments(id));
-      if (user) setHasUpvoted(mockApi.hasUpvoted(id, user.id));
-    }
+    let cancelled = false;
+    const loadData = async () => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const [issueData, commentsData] = await Promise.all([
+          firestoreService.getIssue(id),
+          firestoreService.getComments(id)
+        ]);
+        if (cancelled) return;
+        setIssue(issueData);
+        setComments(commentsData);
+        if (user) {
+          const upvoted = await firestoreService.hasUpvoted(id, user.id);
+          if (!cancelled) setHasUpvoted(upvoted);
+        }
+      } catch (err) {
+        console.error('Failed to load issue:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadData();
+    return () => { cancelled = true; };
   }, [id, user]);
 
-  const handleUpvote = () => {
+  const handleUpvote = async () => {
     if (!user) return setScreen('login');
-    mockApi.toggleUpvote(id, user.id);
-    setIssue(mockApi.getIssue(id));
-    setHasUpvoted(mockApi.hasUpvoted(id, user.id));
+    try {
+      await firestoreService.toggleUpvote(id, user.id);
+      const [updatedIssue, upvoted] = await Promise.all([
+        firestoreService.getIssue(id),
+        firestoreService.hasUpvoted(id, user.id)
+      ]);
+      setIssue(updatedIssue);
+      setHasUpvoted(upvoted);
+    } catch (err) {
+      console.error('Failed to toggle upvote:', err);
+    }
   };
 
-  const handleComment = () => {
+  const handleComment = async () => {
     if (!user || !newComment.trim()) return;
-    mockApi.addComment(id, user.id, user.name, newComment.trim());
-    setComments(mockApi.getComments(id));
-    setNewComment('');
+    try {
+      await firestoreService.addComment(id, user.id, user.name, newComment.trim());
+      const updatedComments = await firestoreService.getComments(id);
+      setComments(updatedComments);
+      setNewComment('');
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+    }
   };
+
+  if (loading) return (
+    <div className="p-10 text-center flex flex-col items-center justify-center min-h-[50vh]">
+      <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading report...</p>
+    </div>
+  );
 
   if (!issue) return <div className="p-10 text-center font-bold text-gray-400">Record Not Found</div>;
 
