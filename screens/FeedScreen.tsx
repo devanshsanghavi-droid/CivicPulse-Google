@@ -126,6 +126,14 @@ export default function FeedScreen() {
               <div className="absolute top-3 left-3">
                 <StatusBadge status={issue.status} />
               </div>
+              {issue.photos.length > 1 && (
+                <div className="absolute top-3 right-3 bg-black/50 text-white text-[10px] font-black px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                  </svg>
+                  {issue.photos.length}
+                </div>
+              )}
             </div>
             <div className="p-5">
               <div className="flex justify-between items-start mb-2">

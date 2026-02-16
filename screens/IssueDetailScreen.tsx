@@ -13,6 +13,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
   const [hasUpvoted, setHasUpvoted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isBanned, setIsBanned] = useState(false);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   // Check ban status for comment restriction
   useEffect(() => {
@@ -98,8 +99,52 @@ export default function IssueDetailScreen({ id }: { id: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
           </svg>
         </button>
-        {issue.photos[0]?.url ? (
-          <img src={issue.photos[0].url} className="w-full aspect-[16/9] object-cover" alt={issue.title} />
+        {issue.photos.length > 0 ? (
+          <div className="relative">
+            <img src={issue.photos[activePhotoIndex]?.url} className="w-full aspect-[16/9] object-cover" alt={issue.title} />
+            
+            {/* Photo navigation arrows */}
+            {issue.photos.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActivePhotoIndex(prev => prev > 0 ? prev - 1 : issue.photos.length - 1)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setActivePhotoIndex(prev => prev < issue.photos.length - 1 ? prev + 1 : 0)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+
+                {/* Dot indicators */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {issue.photos.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActivePhotoIndex(idx)}
+                      className={`rounded-full transition-all ${
+                        idx === activePhotoIndex 
+                          ? 'w-6 h-2 bg-white' 
+                          : 'w-2 h-2 bg-white/50 hover:bg-white/75'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Photo counter */}
+                <div className="absolute top-3 right-14 bg-black/40 text-white text-[10px] font-black px-2.5 py-1 rounded-full backdrop-blur-sm">
+                  {activePhotoIndex + 1} / {issue.photos.length}
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           <div className="w-full aspect-[16/9] bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
             <div className="text-center">

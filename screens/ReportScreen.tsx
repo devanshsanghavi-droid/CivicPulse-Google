@@ -12,8 +12,8 @@ type LocationMode = 'gps' | 'address' | 'pin';
 export default function ReportScreen() {
   const { user, setScreen, setSelectedIssueId } = useApp();
   const [step, setStep] = useState(1);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -260,14 +260,29 @@ export default function ReportScreen() {
     }
   };
 
+  const MAX_PHOTOS = 4;
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
+    const files = e.target.files;
+    if (!files) return;
+    
+    const remaining = MAX_PHOTOS - photos.length;
+    const newFiles = Array.from(files).slice(0, remaining);
+    
+    newFiles.forEach(file => {
+      setPhotoFiles(prev => [...prev, file]);
       const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
+      reader.onloadend = () => setPhotos(prev => [...prev, reader.result as string]);
       reader.readAsDataURL(file);
-    }
+    });
+
+    // Reset the input so the same file can be re-selected if removed
+    e.target.value = '';
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotoFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
@@ -276,11 +291,11 @@ export default function ReportScreen() {
     setSubmitError(null);
     
     try {
-      let photoUrl: string | null = null;
-      
-      // Upload photo if provided
-      if (photoFile) {
-        photoUrl = await firestoreService.uploadPhoto(photoFile);
+      // Upload all photos if provided
+      const uploadedPhotos: { id: string; url: string }[] = [];
+      for (let i = 0; i < photoFiles.length; i++) {
+        const url = await firestoreService.uploadPhoto(photoFiles[i]);
+        uploadedPhotos.push({ id: `p-${Date.now()}-${i}`, url });
       }
       
       // Create issue in Firestore
@@ -294,7 +309,7 @@ export default function ReportScreen() {
         latitude: location.lat,
         longitude: location.lng,
         address: resolvedAddress || "Verified Community Location",
-        photos: photoUrl ? [{ id: 'p-' + Date.now(), url: photoUrl }] : []
+        photos: uploadedPhotos
       });
 
       setSelectedIssueId(newIssue.id);
@@ -327,28 +342,51 @@ export default function ReportScreen() {
         <div className="space-y-8 flex-1 flex flex-col">
           <div className="text-left">
             <h3 className="font-black text-sm uppercase tracking-widest mb-2 text-blue-600">Visual Evidence</h3>
-            <p className="text-gray-500 text-sm leading-relaxed mb-8">High-fidelity imagery significantly expedites city resolution times. You can also skip this step if a photo isn't available.</p>
-            
-            {photo ? (
-              <div className="relative rounded-3xl overflow-hidden border-2 border-blue-50 group">
-                <img src={photo} alt="Issue Capture" className="w-full aspect-[16/10] object-cover" />
-                <button 
-                  onClick={() => { setPhoto(null); setPhotoFile(null); }}
-                  className="absolute top-4 right-4 bg-red-600 text-white rounded-full p-2.5 shadow-xl hover:bg-red-700 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                </button>
+            <p className="text-gray-500 text-sm leading-relaxed mb-2">High-fidelity imagery significantly expedites city resolution times. You can also skip this step if a photo isn't available.</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
+              {photos.length}/{MAX_PHOTOS} photos added
+            </p>
+
+            {photos.length > 0 && (
+              <div className={`grid gap-3 mb-4 ${photos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                {photos.map((p, idx) => (
+                  <div key={idx} className="relative rounded-2xl overflow-hidden border-2 border-blue-50 group">
+                    <img src={p} alt={`Evidence ${idx + 1}`} className={`w-full object-cover ${photos.length === 1 ? 'aspect-[16/10]' : 'aspect-square'}`} />
+                    <button 
+                      onClick={() => removePhoto(idx)}
+                      className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 shadow-xl hover:bg-red-700 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3 h-3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                      {idx + 1}
+                    </div>
+                  </div>
+                ))}
+
+                {photos.length < MAX_PHOTOS && (
+                  <label className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 transition-all group ${photos.length === 1 ? 'aspect-square' : 'aspect-square'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-gray-300 mb-2 group-hover:text-blue-500 transition-colors">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-600 transition-colors">Add More</span>
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" multiple />
+                  </label>
+                )}
               </div>
-            ) : (
+            )}
+
+            {photos.length === 0 && (
               <label className="flex flex-col items-center justify-center aspect-[16/10] border-2 border-dashed border-gray-200 rounded-3xl cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 transition-all group">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-gray-300 mb-4 group-hover:text-blue-500 transition-colors">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15a2.25 2.25 0 0 0 2.25-2.25V9.574c0-1.067-.75-1.994-1.802-2.169a48.323 48.323 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
                 </svg>
                 <span className="text-xs font-black uppercase tracking-widest text-gray-400 group-hover:text-blue-600 transition-colors">Import Evidence Capture</span>
-                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                <span className="text-[10px] text-gray-400 mt-2">Up to {MAX_PHOTOS} photos</span>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" multiple />
               </label>
             )}
           </div>
@@ -356,13 +394,9 @@ export default function ReportScreen() {
           <div className="mt-auto space-y-3">
             <button 
               onClick={() => setStep(2)}
-              className={`w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-100 transition-colors ${
-                photo 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
+              className="w-full py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-100 transition-colors bg-blue-600 text-white hover:bg-blue-700"
             >
-              {photo ? 'Advance to Details' : 'Continue Without Photo'}
+              {photos.length > 0 ? `Advance to Details (${photos.length} photo${photos.length > 1 ? 's' : ''})` : 'Continue Without Photo'}
             </button>
           </div>
         </div>
@@ -595,7 +629,7 @@ export default function ReportScreen() {
               onClick={handleSubmit}
               className="flex-[2] bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest disabled:opacity-50 shadow-xl shadow-blue-100 hover:bg-blue-700 transition-colors"
             >
-              {isSubmitting ? 'Uploading & Saving...' : 'Transmit Report'}
+              {isSubmitting ? `Uploading${photoFiles.length > 0 ? ` ${photoFiles.length} photo${photoFiles.length > 1 ? 's' : ''}` : ''} & Saving...` : 'Transmit Report'}
             </button>
           </div>
         </div>
