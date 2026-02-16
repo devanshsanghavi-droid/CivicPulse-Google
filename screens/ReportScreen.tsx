@@ -102,55 +102,69 @@ export default function ReportScreen() {
   }, [step, location, locationMode]);
 
   // Initialize interactive pin-drop map
+  // Uses a timeout to ensure the container has layout dimensions before Leaflet inits
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
     if (step === 3 && locationMode === 'pin' && pinMapContainerRef.current && !pinMapInstanceRef.current) {
-      const center = gpsLocation || { lat: 37.3852, lng: -122.1141 };
-      const map = L.map(pinMapContainerRef.current, {
-        center: [center.lat, center.lng],
-        zoom: 15,
-        zoomControl: true,
-        attributionControl: false,
-      });
+      // Delay init so the container div is fully laid out in the DOM
+      timer = setTimeout(() => {
+        if (cancelled || !pinMapContainerRef.current) return;
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
-        maxZoom: 20
-      }).addTo(map);
+        const center = gpsLocation || { lat: 37.3852, lng: -122.1141 };
+        const map = L.map(pinMapContainerRef.current, {
+          center: [center.lat, center.lng],
+          zoom: 15,
+          zoomControl: true,
+          attributionControl: false,
+        });
 
-      const pinIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: `<div style="width:20px;height:20px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          subdomains: 'abcd',
+          maxZoom: 20
+        }).addTo(map);
 
-      // Place initial marker
-      const marker = L.marker([center.lat, center.lng], { icon: pinIcon, draggable: true }).addTo(map);
-      pinMarkerRef.current = marker;
-      setLocation({ lat: center.lat, lng: center.lng });
+        // Force layout recalc before adding marker
+        map.invalidateSize();
 
-      // Update location on marker drag
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng();
-        setLocation({ lat: pos.lat, lng: pos.lng });
-        setResolvedAddress(null);
-        // Reverse geocode the dropped pin
-        reverseGeocode(pos.lat, pos.lng);
-      });
+        const pinIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div style="width:20px;height:20px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
 
-      // Click map to move pin
-      map.on('click', (e: any) => {
-        marker.setLatLng(e.latlng);
-        setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
-        setResolvedAddress(null);
-        reverseGeocode(e.latlng.lat, e.latlng.lng);
-      });
+        // Place draggable marker after map is sized
+        const marker = L.marker([center.lat, center.lng], { icon: pinIcon, draggable: true }).addTo(map);
+        pinMarkerRef.current = marker;
+        setLocation({ lat: center.lat, lng: center.lng });
 
-      pinMapInstanceRef.current = map;
-      setTimeout(() => map.invalidateSize(), 100);
+        // Update location on marker drag
+        marker.on('dragend', () => {
+          const pos = marker.getLatLng();
+          setLocation({ lat: pos.lat, lng: pos.lng });
+          setResolvedAddress(null);
+          reverseGeocode(pos.lat, pos.lng);
+        });
+
+        // Click map to move pin (remove old marker, add new one to avoid _leaflet_pos issues)
+        map.on('click', (e: any) => {
+          if (pinMarkerRef.current) {
+            pinMarkerRef.current.setLatLng(e.latlng);
+          }
+          setLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+          setResolvedAddress(null);
+          reverseGeocode(e.latlng.lat, e.latlng.lng);
+        });
+
+        pinMapInstanceRef.current = map;
+      }, 150);
     }
 
     return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
       if (pinMapInstanceRef.current) {
         pinMapInstanceRef.current.remove();
         pinMapInstanceRef.current = null;
@@ -159,28 +173,22 @@ export default function ReportScreen() {
     };
   }, [step, locationMode]);
 
-  // Cleanup maps when location mode changes
+  // Reset state when location mode changes
   useEffect(() => {
     if (locationMode === 'gps') {
-      // Restore GPS location
       if (gpsLocation) setLocation(gpsLocation);
       setResolvedAddress(null);
       setGeocodeError(null);
     } else if (locationMode === 'address') {
-      // Reset until user searches
       setLocation(null);
       setResolvedAddress(null);
       setGeocodeError(null);
     }
-    // Cleanup maps when switching modes
+    // Note: map cleanup is handled by each map's own useEffect cleanup
+    // We only need to clear the mini-map here since it depends on locationMode
     if (miniMapInstanceRef.current) {
       miniMapInstanceRef.current.remove();
       miniMapInstanceRef.current = null;
-    }
-    if (pinMapInstanceRef.current) {
-      pinMapInstanceRef.current.remove();
-      pinMapInstanceRef.current = null;
-      pinMarkerRef.current = null;
     }
   }, [locationMode]);
 
