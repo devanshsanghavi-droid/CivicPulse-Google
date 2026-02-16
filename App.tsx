@@ -206,7 +206,12 @@ export default function App() {
               <div className="flex items-center gap-2">
                 {user && <NotificationBell />}
                 {!user && (
-                  <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">Sign In</button>
+                  <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                    </svg>
+                    Sign in to Report
+                  </button>
                 )}
               </div>
             </header>
@@ -217,7 +222,17 @@ export default function App() {
                   <button onClick={handleLogoClick} className="text-xl font-bold text-blue-600">CivicPulse</button>
                   {user && <NotificationBell />}
                 </div>
-                <Navigation />
+                <div className="flex items-center gap-4">
+                  {!user && (
+                    <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                      </svg>
+                      Sign in to Report
+                    </button>
+                  )}
+                  <Navigation />
+                </div>
               </div>
             </header>
           </>
