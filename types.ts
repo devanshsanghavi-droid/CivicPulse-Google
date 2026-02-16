@@ -44,6 +44,8 @@ export interface Issue {
   createdAt: string;
   updatedAt: string;
   hidden: boolean;
+  deletedAt?: string;       // ISO date when admin deleted
+  deletedByName?: string;   // Name of the admin who deleted
   upvoteCount: number;
   photos: IssuePhoto[];
 }
@@ -58,6 +60,8 @@ export interface Comment {
   createdAt: string;
   updatedAt: string;
   hidden: boolean;
+  deletedAt?: string;       // ISO date when admin deleted
+  deletedByName?: string;   // Name of the admin who deleted
 }
 
 export interface Notification {

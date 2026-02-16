@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useApp } from '../App';
 import { firestoreService } from '../services/firestoreService';
 import { Issue, IssueStatus, LoginRecord, Comment, UserRecord, BanType, UserRole } from '../types';
 import { CATEGORIES, CITY_NAME } from '../constants';
@@ -12,6 +13,7 @@ function UserProfileModal({
   userId: string; email: string; name: string; photoURL?: string; loginHistory: LoginRecord[];
   onClose: () => void;
 }) {
+  const { user: adminUser } = useApp();
   const [userIssues, setUserIssues] = useState<Issue[]>([]);
   const [userComments, setUserComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -386,8 +388,27 @@ function UserProfileModal({
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Comments by {name.split(' ')[0]}</h4>
               <div className="space-y-2">
                 {userComments.slice(0, 10).map(c => (
-                  <div key={c.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm">
-                    <p className="text-gray-700 leading-relaxed">{c.body}</p>
+                  <div key={c.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm group">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-gray-700 leading-relaxed flex-1">{c.body}</p>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm('Delete this comment? You can restore it later from the Deleted Items section.')) return;
+                          try {
+                            await firestoreService.deleteComment(c.id, adminUser?.name || 'Admin');
+                            setUserComments(prev => prev.filter(cc => cc.id !== c.id));
+                          } catch (err) {
+                            console.error('Failed to delete comment:', err);
+                          }
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0 p-1 rounded-lg hover:bg-red-50"
+                        title="Delete comment"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                      </button>
+                    </div>
                     <span className="text-[10px] text-gray-400 font-medium mt-1 block">{new Date(c.createdAt).toLocaleDateString()}</span>
                   </div>
                 ))}
@@ -424,6 +445,7 @@ function UserProfileModal({
 
 // ─── Main Admin Dashboard ─────────────────────────────────────────
 export default function AdminDashboardScreen() {
+  const { user } = useApp();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [tab, setTab] = useState<'issues' | 'digest' | 'details'>('issues');
   const [digestHtml, setDigestHtml] = useState('');
@@ -442,6 +464,11 @@ export default function AdminDashboardScreen() {
   const [bannedUsers, setBannedUsers] = useState<UserRecord[]>([]);
   const [loadingBanned, setLoadingBanned] = useState(false);
 
+  // Deleted items history
+  const [deletedIssues, setDeletedIssues] = useState<Issue[]>([]);
+  const [deletedComments, setDeletedComments] = useState<Comment[]>([]);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
+
   const refreshBannedUsers = async () => {
     setLoadingBanned(true);
     try {
@@ -450,6 +477,22 @@ export default function AdminDashboardScreen() {
       console.error('Failed to load banned users:', err);
     } finally {
       setLoadingBanned(false);
+    }
+  };
+
+  const refreshDeletedItems = async () => {
+    setLoadingDeleted(true);
+    try {
+      const [issues, comments] = await Promise.all([
+        firestoreService.getDeletedIssues(),
+        firestoreService.getDeletedComments()
+      ]);
+      setDeletedIssues(issues);
+      setDeletedComments(comments);
+    } catch (err) {
+      console.error('Failed to load deleted items:', err);
+    } finally {
+      setLoadingDeleted(false);
     }
   };
 
@@ -479,6 +522,7 @@ export default function AdminDashboardScreen() {
       };
       loadLogins();
       refreshBannedUsers();
+      refreshDeletedItems();
     }
   }, [tab]);
 
@@ -502,11 +546,29 @@ export default function AdminDashboardScreen() {
 
   const handleDeleteIssue = async (id: string) => {
     try {
-      await firestoreService.deleteIssue(id);
+      await firestoreService.deleteIssue(id, user?.name || 'Admin');
       setConfirmDelete(null);
       await refreshIssues();
     } catch (err) {
       console.error('Failed to delete issue:', err);
+    }
+  };
+
+  const handleRestoreIssue = async (id: string) => {
+    try {
+      await firestoreService.restoreIssue(id);
+      await Promise.all([refreshIssues(), refreshDeletedItems()]);
+    } catch (err) {
+      console.error('Failed to restore issue:', err);
+    }
+  };
+
+  const handleRestoreComment = async (id: string) => {
+    try {
+      await firestoreService.restoreComment(id);
+      await refreshDeletedItems();
+    } catch (err) {
+      console.error('Failed to restore comment:', err);
     }
   };
 
@@ -970,6 +1032,135 @@ export default function AdminDashboardScreen() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Deleted Posts */}
+          {(deletedIssues.length > 0 || deletedComments.length > 0 || loadingDeleted) && (
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                Deleted Items ({deletedIssues.length + deletedComments.length})
+              </h3>
+              <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+                {loadingDeleted ? (
+                  <div className="p-8 text-center">
+                    <svg className="animate-spin h-6 w-6 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Deleted Issues */}
+                    {deletedIssues.length > 0 && (
+                      <div>
+                        <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Deleted Reports ({deletedIssues.length})</span>
+                        </div>
+                        <div className="divide-y divide-gray-50">
+                          {deletedIssues.map(issue => (
+                            <div key={issue.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                              {issue.photos[0]?.url ? (
+                                <img src={issue.photos[0].url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 grayscale" />
+                              ) : (
+                                <div className="w-14 h-10 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-sm text-gray-600 truncate line-through">{issue.title}</span>
+                                  <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                                    issue.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' :
+                                    issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 'bg-red-50 text-red-600 border-red-100'
+                                  }`}>{issue.status}</span>
+                                </div>
+                                <p className="text-xs text-gray-400 truncate mt-0.5">{issue.description}</p>
+                                <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
+                                  <span>By {issue.creatorName}</span>
+                                  <span>{CATEGORIES.find(c => c.id === issue.categoryId)?.name || 'General'}</span>
+                                  <span>{issue.upvoteCount} votes</span>
+                                  {issue.deletedAt && (
+                                    <span className="text-red-400">
+                                      Deleted {new Date(issue.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      {issue.deletedByName ? ` by ${issue.deletedByName}` : ''}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleRestoreIssue(issue.id)}
+                                className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1 flex-shrink-0"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                                </svg>
+                                Restore
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Deleted Comments */}
+                    {deletedComments.length > 0 && (
+                      <div>
+                        <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 border-t">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Deleted Comments ({deletedComments.length})</span>
+                        </div>
+                        <div className="divide-y divide-gray-50">
+                          {deletedComments.map(comment => (
+                            <div key={comment.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                              {comment.userPhotoURL ? (
+                                <img src={comment.userPhotoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 flex-shrink-0 grayscale" />
+                              ) : (
+                                <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                                  </svg>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs text-gray-500">{comment.userName}</span>
+                                </div>
+                                <p className="text-xs text-gray-400 line-through mt-0.5">{comment.body.length > 120 ? comment.body.substring(0, 120) + '...' : comment.body}</p>
+                                <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-medium flex-wrap">
+                                  <span>Posted {new Date(comment.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                  {comment.deletedAt && (
+                                    <span className="text-red-400">
+                                      Deleted {new Date(comment.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      {comment.deletedByName ? ` by ${comment.deletedByName}` : ''}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleRestoreComment(comment.id)}
+                                className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1 flex-shrink-0"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                                </svg>
+                                Restore
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {deletedIssues.length === 0 && deletedComments.length === 0 && (
+                      <div className="p-12 text-center">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">No deleted items</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -93,8 +93,30 @@ export const firestoreService = {
     });
   },
 
-  deleteIssue: async (id: string): Promise<void> => {
-    await updateDoc(doc(db, 'issues', id), { hidden: true, updatedAt: new Date().toISOString() });
+  deleteIssue: async (id: string, deletedByName?: string): Promise<void> => {
+    await updateDoc(doc(db, 'issues', id), {
+      hidden: true,
+      deletedAt: new Date().toISOString(),
+      deletedByName: deletedByName || 'Admin',
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  getDeletedIssues: async (): Promise<Issue[]> => {
+    const snapshot = await getDocs(collection(db, 'issues'));
+    return snapshot.docs
+      .map(d => ({ ...d.data(), id: d.id } as Issue))
+      .filter(i => i.hidden)
+      .sort((a, b) => new Date(b.deletedAt || b.updatedAt).getTime() - new Date(a.deletedAt || a.updatedAt).getTime());
+  },
+
+  restoreIssue: async (id: string): Promise<void> => {
+    await updateDoc(doc(db, 'issues', id), {
+      hidden: false,
+      deletedAt: '',
+      deletedByName: '',
+      updatedAt: new Date().toISOString()
+    });
   },
 
   getIssuesByUser: async (userId: string): Promise<Issue[]> => {
@@ -185,6 +207,32 @@ export const firestoreService = {
     };
     const docRef = await addDoc(collection(db, 'comments'), commentData);
     return { ...commentData, id: docRef.id } as Comment;
+  },
+
+  deleteComment: async (id: string, deletedByName?: string): Promise<void> => {
+    await updateDoc(doc(db, 'comments', id), {
+      hidden: true,
+      deletedAt: new Date().toISOString(),
+      deletedByName: deletedByName || 'Admin',
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  getDeletedComments: async (): Promise<Comment[]> => {
+    const snapshot = await getDocs(collection(db, 'comments'));
+    return snapshot.docs
+      .map(d => ({ ...d.data(), id: d.id } as Comment))
+      .filter(c => c.hidden)
+      .sort((a, b) => new Date(b.deletedAt || b.updatedAt).getTime() - new Date(a.deletedAt || a.updatedAt).getTime());
+  },
+
+  restoreComment: async (id: string): Promise<void> => {
+    await updateDoc(doc(db, 'comments', id), {
+      hidden: false,
+      deletedAt: '',
+      deletedByName: '',
+      updatedAt: new Date().toISOString()
+    });
   },
 
   // ─── User Stats ────────────────────────────────────────────────
