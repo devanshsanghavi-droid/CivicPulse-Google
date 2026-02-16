@@ -276,19 +276,24 @@ export const firestoreService = {
     const userRef = doc(db, 'users', data.id);
     const snap = await getDoc(userRef);
     if (snap.exists()) {
-      // Only update lastLoginAt + name/photo, preserve role & ban status
-      await updateDoc(userRef, {
+      // Update lastLoginAt + name/photo, preserve ban status
+      // Also update role if the incoming data has super_admin (ensures super admins get their role)
+      const updateData: any = {
         name: data.name,
         photoURL: data.photoURL || '',
         lastLoginAt: data.lastLoginAt
-      });
+      };
+      if (data.role === 'super_admin') {
+        updateData.role = 'super_admin';
+      }
+      await updateDoc(userRef, updateData);
     } else {
-      // Brand new user — default role: resident, no ban
+      // Brand new user — use the role from data (super_admin or resident)
       await setDoc(userRef, {
         email: data.email,
         name: data.name,
         photoURL: data.photoURL || '',
-        role: 'resident' as UserRole,
+        role: data.role || 'resident' as UserRole,
         banType: 'none' as BanType,
         createdAt: data.createdAt,
         lastLoginAt: data.lastLoginAt

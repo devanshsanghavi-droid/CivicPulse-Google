@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { firestoreService } from '../services/firestoreService';
+import { mockApi } from '../services/mockApi';
 import { Issue, IssueStatus, LoginRecord, Comment, UserRecord, BanType, UserRole } from '../types';
 import { CATEGORIES, CITY_NAME } from '../constants';
 
@@ -1315,7 +1316,7 @@ export default function AdminDashboardScreen() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="font-bold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">{u.name}</span>
-                                    {u.email.toLowerCase() === 'notdev42@gmail.com' && (
+                                    {mockApi.isSuperAdmin(u.email) && (
                                       <span className="text-[8px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">Admin</span>
                                     )}
                                   </div>

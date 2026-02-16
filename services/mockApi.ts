@@ -34,6 +34,13 @@ export const calculateTrendingScore = (issue: Issue) => {
 
 export const mockApi = {
   // --- Auth & Profile ---
+  // Super admin emails
+  SUPER_ADMIN_EMAILS: ['notdev42@gmail.com', 'civicpulsehelpdesk@gmail.com'] as string[],
+
+  isSuperAdmin: (email: string): boolean => {
+    return mockApi.SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
+  },
+
   login: (email: string, password?: string): User | null => {
     if (email === 'notdev42@gmail.com') {
       if (password === 'devansh1234') {
@@ -67,9 +74,9 @@ export const mockApi = {
     const users = getStored<StoredUser[]>(STORAGE_KEYS.USERS, []);
     let user = users.find(u => u.email === email);
     
-    // Determine role: super_admin for notdev42@gmail.com, resident for everyone else
-    const isAdmin = email.toLowerCase() === 'notdev42@gmail.com';
-    const role: UserRole = isAdmin ? 'super_admin' : 'resident';
+    // Determine role: super_admin for designated emails, resident for everyone else
+    const isSuperAdminEmail = mockApi.isSuperAdmin(email);
+    const role: UserRole = isSuperAdminEmail ? 'super_admin' : 'resident';
     
     if (!user) {
       const newUser: StoredUser = {
@@ -92,7 +99,7 @@ export const mockApi = {
       user.photoURL = photoURL || user.photoURL || '';
       user.name = name || user.name;
       user.lastLoginAt = new Date().toISOString();
-      if (isAdmin) user.role = 'super_admin';
+      if (isSuperAdminEmail) user.role = 'super_admin';
       const idx = users.findIndex(u => u.id === user!.id);
       if (idx !== -1) users[idx] = user;
       setStored(STORAGE_KEYS.USERS, users);
