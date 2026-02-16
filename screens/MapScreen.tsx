@@ -9,11 +9,14 @@ import { CATEGORIES } from '../constants';
 declare var L: any;
 
 export default function MapScreen() {
-  const { setScreen, setSelectedIssueId, user } = useApp();
+  const { setScreen, setSelectedIssueId, selectedIssueId, user } = useApp();
   const [issues, setIssues] = useState<Issue[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
   const [isReady, setIsReady] = useState(false);
+  // Track whether we opened for a specific issue (so we skip GPS centering)
+  const focusIssueIdRef = useRef<string | null>(selectedIssueId);
 
   useEffect(() => {
     const loadIssues = async () => {
@@ -57,11 +60,14 @@ export default function MapScreen() {
       setIsReady(true);
     }, 250);
 
-    // Attempt High-Accuracy Geolocation
-    if (navigator.geolocation) {
+    // Only use GPS geolocation if we're NOT focused on a specific issue
+    if (!focusIssueIdRef.current && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+          // Don't override if user has since focused on an issue
+          if (!focusIssueIdRef.current) {
+            map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+          }
         },
         () => console.warn("Location access denied. Using default center."),
         { 
@@ -85,6 +91,9 @@ export default function MapScreen() {
     if (!mapInstanceRef.current || !isReady || issues.length === 0) return;
 
     const map = mapInstanceRef.current;
+    // Clear any previously added markers
+    markersRef.current.forEach(m => map.removeLayer(m));
+    markersRef.current.clear();
     
     issues.forEach(issue => {
       const category = CATEGORIES.find(c => c.id === issue.categoryId);
@@ -128,7 +137,23 @@ export default function MapScreen() {
       marker.on('mouseover', function(e: any) {
         this.openPopup();
       });
+
+      markersRef.current.set(issue.id, marker);
     });
+
+    // If we opened the map for a specific issue, center on it and show its popup
+    if (focusIssueIdRef.current) {
+      const focusIssue = issues.find(i => i.id === focusIssueIdRef.current);
+      if (focusIssue) {
+        map.setView([focusIssue.latitude, focusIssue.longitude], 17, { animate: true });
+        const focusMarker = markersRef.current.get(focusIssue.id);
+        if (focusMarker) {
+          setTimeout(() => focusMarker.openPopup(), 400);
+        }
+      }
+      // Clear the focus so subsequent interactions don't keep re-centering
+      focusIssueIdRef.current = null;
+    }
   }, [issues, isReady, setScreen, setSelectedIssueId]);
 
   return (
