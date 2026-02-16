@@ -469,6 +469,22 @@ export default function AdminDashboardScreen() {
   const [deletedComments, setDeletedComments] = useState<Comment[]>([]);
   const [loadingDeleted, setLoadingDeleted] = useState(false);
 
+  // Section open/close + search state
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({
+    banned: false,
+    deleted: false,
+    users: false,
+    logins: false
+  });
+  const [sectionSearch, setSectionSearch] = useState<Record<string, string>>({
+    banned: '',
+    deleted: '',
+    users: '',
+    logins: ''
+  });
+  const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  const setSectionSearchValue = (key: string, val: string) => setSectionSearch(prev => ({ ...prev, [key]: val }));
+
   const refreshBannedUsers = async () => {
     setLoadingBanned(true);
     try {
@@ -955,335 +971,455 @@ export default function AdminDashboardScreen() {
 
           {/* Banned Users */}
           {(bannedUsers.length > 0 || loadingBanned) && (
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 mb-3 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+            <div className="bg-white border border-red-100 rounded-3xl overflow-hidden shadow-sm">
+              <button onClick={() => toggleSection('banned')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-red-50/30 transition-colors">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  Banned Users ({bannedUsers.length})
+                </h3>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${sectionOpen.banned ? 'rotate-180' : ''}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                 </svg>
-                Banned Users ({bannedUsers.length})
-              </h3>
-              <div className="bg-white border border-red-100 rounded-3xl overflow-hidden shadow-sm">
-                {loadingBanned ? (
-                  <div className="p-8 text-center">
-                    <svg className="animate-spin h-6 w-6 text-red-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-red-50">
-                    {bannedUsers.map(bu => {
-                      const remaining = bu.banType === 'temporary' && bu.bannedUntil
-                        ? (() => {
-                            const ms = new Date(bu.bannedUntil).getTime() - Date.now();
-                            const hrs = Math.floor(ms / (1000 * 60 * 60));
-                            const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-                            if (hrs > 24) return `${Math.floor(hrs / 24)}d ${hrs % 24}h left`;
-                            if (hrs > 0) return `${hrs}h ${mins}m left`;
-                            return `${mins}m left`;
-                          })()
-                        : null;
-                      return (
-                        <div key={bu.id} className="px-6 py-4 flex items-center gap-4">
-                          {bu.photoURL ? (
-                            <img src={bu.photoURL} alt={bu.name} className="w-10 h-10 rounded-xl object-cover border border-red-200 flex-shrink-0" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex-shrink-0 flex items-center justify-center text-red-400">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-sm text-gray-900 truncate">{bu.name}</span>
-                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                                bu.banType === 'permanent' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-orange-100 text-orange-700 border-orange-200'
-                              }`}>
-                                {bu.banType === 'permanent' ? 'Permanent' : remaining}
-                              </span>
-                            </div>
-                            <span className="text-xs text-gray-400 font-medium block truncate">{bu.email}</span>
-                            {bu.banReason && (
-                              <span className="text-[10px] text-red-500 font-medium block mt-0.5">Reason: {bu.banReason}</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await firestoreService.unbanUser(bu.id);
-                                  await refreshBannedUsers();
-                                } catch (err) {
-                                  console.error('Unban failed:', err);
-                                }
-                              }}
-                              className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-all flex items-center gap-1"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                              </svg>
-                              Unban
-                            </button>
-                            <button
-                              onClick={() => setSelectedUser({ userId: bu.id, email: bu.email, name: bu.name, photoURL: bu.photoURL })}
-                              className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all"
-                            >
-                              Profile
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Deleted Posts */}
-          {(deletedIssues.length > 0 || deletedComments.length > 0 || loadingDeleted) && (
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-3 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                </svg>
-                Deleted Items ({deletedIssues.length + deletedComments.length})
-              </h3>
-              <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
-                {loadingDeleted ? (
-                  <div className="p-8 text-center">
-                    <svg className="animate-spin h-6 w-6 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  </div>
-                ) : (
-                  <div>
-                    {/* Deleted Issues */}
-                    {deletedIssues.length > 0 && (
-                      <div>
-                        <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Deleted Reports ({deletedIssues.length})</span>
-                        </div>
-                        <div className="divide-y divide-gray-50">
-                          {deletedIssues.map(issue => (
-                            <div key={issue.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
-                              {issue.photos[0]?.url ? (
-                                <img src={issue.photos[0].url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 grayscale" />
-                              ) : (
-                                <div className="w-14 h-10 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
-                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
-                                  </svg>
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-sm text-gray-600 truncate line-through">{issue.title}</span>
-                                  <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
-                                    issue.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                    issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 'bg-red-50 text-red-600 border-red-100'
-                                  }`}>{issue.status}</span>
-                                </div>
-                                <p className="text-xs text-gray-400 truncate mt-0.5">{issue.description}</p>
-                                <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
-                                  <span>By {issue.creatorName}</span>
-                                  <span>{CATEGORIES.find(c => c.id === issue.categoryId)?.name || 'General'}</span>
-                                  <span>{issue.upvoteCount} votes</span>
-                                  {issue.deletedAt && (
-                                    <span className="text-red-400">
-                                      Deleted {new Date(issue.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                      {issue.deletedByName ? ` by ${issue.deletedByName}` : ''}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleRestoreIssue(issue.id)}
-                                className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1 flex-shrink-0"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
-                                </svg>
-                                Restore
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+              </button>
+              {sectionOpen.banned && (
+                <div>
+                  {bannedUsers.length > 1 && (
+                    <div className="px-6 pb-3">
+                      <div className="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search banned users..."
+                          value={sectionSearch.banned}
+                          onChange={e => setSectionSearchValue('banned', e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-red-300 focus:border-red-300 bg-gray-50/50"
+                        />
                       </div>
-                    )}
-
-                    {/* Deleted Comments */}
-                    {deletedComments.length > 0 && (
-                      <div>
-                        <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 border-t">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Deleted Comments ({deletedComments.length})</span>
-                        </div>
-                        <div className="divide-y divide-gray-50">
-                          {deletedComments.map(comment => (
-                            <div key={comment.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
-                              {comment.userPhotoURL ? (
-                                <img src={comment.userPhotoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 flex-shrink-0 grayscale" />
+                    </div>
+                  )}
+                  {loadingBanned ? (
+                    <div className="p-8 text-center">
+                      <svg className="animate-spin h-6 w-6 text-red-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                  ) : (() => {
+                    const q = sectionSearch.banned.toLowerCase();
+                    const filtered = q ? bannedUsers.filter(bu => bu.name.toLowerCase().includes(q) || bu.email.toLowerCase().includes(q) || (bu.banReason || '').toLowerCase().includes(q)) : bannedUsers;
+                    return filtered.length > 0 ? (
+                      <div className="divide-y divide-red-50 border-t border-red-50">
+                        {filtered.map(bu => {
+                          const remaining = bu.banType === 'temporary' && bu.bannedUntil
+                            ? (() => {
+                                const ms = new Date(bu.bannedUntil).getTime() - Date.now();
+                                const hrs = Math.floor(ms / (1000 * 60 * 60));
+                                const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+                                if (hrs > 24) return `${Math.floor(hrs / 24)}d ${hrs % 24}h left`;
+                                if (hrs > 0) return `${hrs}h ${mins}m left`;
+                                return `${mins}m left`;
+                              })()
+                            : null;
+                          return (
+                            <div key={bu.id} className="px-6 py-4 flex items-center gap-4">
+                              {bu.photoURL ? (
+                                <img src={bu.photoURL} alt={bu.name} className="w-10 h-10 rounded-xl object-cover border border-red-200 flex-shrink-0" />
                               ) : (
-                                <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
-                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex-shrink-0 flex items-center justify-center text-red-400">
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                                   </svg>
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-xs text-gray-500">{comment.userName}</span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-sm text-gray-900 truncate">{bu.name}</span>
+                                  <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+                                    bu.banType === 'permanent' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-orange-100 text-orange-700 border-orange-200'
+                                  }`}>
+                                    {bu.banType === 'permanent' ? 'Permanent' : remaining}
+                                  </span>
                                 </div>
-                                <p className="text-xs text-gray-400 line-through mt-0.5">{comment.body.length > 120 ? comment.body.substring(0, 120) + '...' : comment.body}</p>
-                                <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-medium flex-wrap">
-                                  <span>Posted {new Date(comment.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                  {comment.deletedAt && (
-                                    <span className="text-red-400">
-                                      Deleted {new Date(comment.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                      {comment.deletedByName ? ` by ${comment.deletedByName}` : ''}
-                                    </span>
-                                  )}
-                                </div>
+                                <span className="text-xs text-gray-400 font-medium block truncate">{bu.email}</span>
+                                {bu.banReason && (
+                                  <span className="text-[10px] text-red-500 font-medium block mt-0.5">Reason: {bu.banReason}</span>
+                                )}
                               </div>
-                              <button
-                                onClick={() => handleRestoreComment(comment.id)}
-                                className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1 flex-shrink-0"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
-                                </svg>
-                                Restore
-                              </button>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await firestoreService.unbanUser(bu.id);
+                                      await refreshBannedUsers();
+                                    } catch (err) {
+                                      console.error('Unban failed:', err);
+                                    }
+                                  }}
+                                  className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-all flex items-center gap-1"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                  </svg>
+                                  Unban
+                                </button>
+                                <button
+                                  onClick={() => setSelectedUser({ userId: bu.id, email: bu.email, name: bu.name, photoURL: bu.photoURL })}
+                                  className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all"
+                                >
+                                  Profile
+                                </button>
+                              </div>
                             </div>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-                    )}
-
-                    {deletedIssues.length === 0 && deletedComments.length === 0 && (
-                      <div className="p-12 text-center">
-                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">No deleted items</p>
+                    ) : (
+                      <div className="p-8 text-center border-t border-red-50">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">No results for "{sectionSearch.banned}"</p>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Unique Users Table */}
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Registered Users</h3>
-            <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-              {loadingLogins ? (
-                <div className="p-12 text-center flex flex-col items-center">
-                  <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Loading user data...</p>
-                </div>
-              ) : (() => {
-                // Deduplicate users by email, picking the most recent login for each
-                const userMap = new Map<string, LoginRecord>();
-                loginHistory.forEach(l => {
-                  const existing = userMap.get(l.email);
-                  if (!existing || new Date(l.loginAt) > new Date(existing.loginAt)) {
-                    userMap.set(l.email, l);
-                  }
-                });
-                const uniqueUserList = Array.from(userMap.values())
-                  .sort((a, b) => new Date(b.loginAt).getTime() - new Date(a.loginAt).getTime());
-
-                return uniqueUserList.length > 0 ? (
-                  <div className="divide-y divide-gray-50">
-                    {uniqueUserList.map((user) => {
-                      const loginCount = loginHistory.filter(l => l.email === user.email).length;
-                      const userIssueCount = issues.filter(i => i.createdBy === user.userId).length;
-                      return (
-                        <button
-                          key={user.email}
-                          onClick={() => setSelectedUser({ userId: user.userId, email: user.email, name: user.name, photoURL: user.photoURL })}
-                          className="w-full px-6 py-4 flex items-center gap-4 hover:bg-blue-50/50 transition-colors text-left group"
-                        >
-                          {user.photoURL ? (
-                            <img src={user.photoURL} alt={user.name} className="w-11 h-11 rounded-xl object-cover border border-gray-200 flex-shrink-0 group-hover:border-blue-300 transition-colors" />
-                          ) : (
-                            <div className="w-11 h-11 rounded-xl bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400 group-hover:border-blue-300 transition-colors">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                              </svg>
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">{user.name}</span>
-                              {user.email.toLowerCase() === 'notdev42@gmail.com' && (
-                                <span className="text-[8px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">Admin</span>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-400 font-medium truncate block">{user.email}</span>
-                          </div>
-                          <div className="flex items-center gap-4 flex-shrink-0">
-                            <div className="text-center hidden md:block">
-                              <div className="text-sm font-black text-gray-900">{loginCount}</div>
-                              <div className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">Logins</div>
-                            </div>
-                            <div className="text-center hidden md:block">
-                              <div className="text-sm font-black text-gray-900">{userIssueCount}</div>
-                              <div className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">Reports</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs font-bold text-gray-600">
-                                {new Date(user.loginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                              </div>
-                              <div className="text-[10px] text-gray-400 font-medium">
-                                {new Date(user.loginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                            </svg>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-16 text-center flex flex-col items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 text-gray-200 mb-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-          </svg>
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">No users yet</p>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Recent Login Activity */}
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Recent Login Activity</h3>
-            <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-              {loginHistory.length > 0 ? (
-                <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto">
-                  {loginHistory.slice(0, 50).map((login) => (
-                    <div key={login.id} className="px-6 py-3 flex items-center gap-3 text-xs">
-                      {login.photoURL ? (
-                        <img src={login.photoURL} alt="" className="w-7 h-7 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
-                      ) : (
-                        <div className="w-7 h-7 rounded-lg bg-gray-100 flex-shrink-0" />
-                      )}
-                      <span className="font-bold text-gray-700 truncate flex-1">{login.name}</span>
-                      <span className="text-gray-400 font-medium hidden md:inline">{login.email}</span>
-                      <span className="text-gray-400 font-medium flex-shrink-0">
-                        {new Date(login.loginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(login.loginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <span className="text-[9px] text-gray-300 font-medium flex-shrink-0 hidden md:inline">
-                        {login.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">No login activity yet</p>
+                    );
+                  })()}
                 </div>
               )}
             </div>
+          )}
+
+          {/* Deleted Items */}
+          {(deletedIssues.length > 0 || deletedComments.length > 0 || loadingDeleted) && (
+            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+              <button onClick={() => toggleSection('deleted')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                  Deleted Items ({deletedIssues.length + deletedComments.length})
+                </h3>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${sectionOpen.deleted ? 'rotate-180' : ''}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+              {sectionOpen.deleted && (
+                <div>
+                  {(deletedIssues.length + deletedComments.length) > 1 && (
+                    <div className="px-6 pb-3">
+                      <div className="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search deleted items..."
+                          value={sectionSearch.deleted}
+                          onChange={e => setSectionSearchValue('deleted', e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 bg-gray-50/50"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {loadingDeleted ? (
+                    <div className="p-8 text-center">
+                      <svg className="animate-spin h-6 w-6 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                  ) : (() => {
+                    const q = sectionSearch.deleted.toLowerCase();
+                    const filteredIssuesDel = q ? deletedIssues.filter(i => i.title.toLowerCase().includes(q) || i.creatorName.toLowerCase().includes(q) || i.description.toLowerCase().includes(q)) : deletedIssues;
+                    const filteredCommentsDel = q ? deletedComments.filter(c => c.userName.toLowerCase().includes(q) || c.body.toLowerCase().includes(q)) : deletedComments;
+
+                    return (filteredIssuesDel.length > 0 || filteredCommentsDel.length > 0) ? (
+                      <div>
+                        {filteredIssuesDel.length > 0 && (
+                          <div>
+                            <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 border-t">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Deleted Reports ({filteredIssuesDel.length})</span>
+                            </div>
+                            <div className="divide-y divide-gray-50">
+                              {filteredIssuesDel.map(issue => (
+                                <div key={issue.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                                  {issue.photos[0]?.url ? (
+                                    <img src={issue.photos[0].url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 grayscale" />
+                                  ) : (
+                                    <div className="w-14 h-10 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold text-sm text-gray-600 truncate line-through">{issue.title}</span>
+                                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                                        issue.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' :
+                                        issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 'bg-red-50 text-red-600 border-red-100'
+                                      }`}>{issue.status}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 truncate mt-0.5">{issue.description}</p>
+                                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
+                                      <span>By {issue.creatorName}</span>
+                                      <span>{CATEGORIES.find(c => c.id === issue.categoryId)?.name || 'General'}</span>
+                                      <span>{issue.upvoteCount} votes</span>
+                                      {issue.deletedAt && (
+                                        <span className="text-red-400">
+                                          Deleted {new Date(issue.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                          {issue.deletedByName ? ` by ${issue.deletedByName}` : ''}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRestoreIssue(issue.id)}
+                                    className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1 flex-shrink-0"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                                    </svg>
+                                    Restore
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {filteredCommentsDel.length > 0 && (
+                          <div>
+                            <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 border-t">
+                              <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Deleted Comments ({filteredCommentsDel.length})</span>
+                            </div>
+                            <div className="divide-y divide-gray-50">
+                              {filteredCommentsDel.map(comment => (
+                                <div key={comment.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                                  {comment.userPhotoURL ? (
+                                    <img src={comment.userPhotoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 flex-shrink-0 grayscale" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
+                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs text-gray-500">{comment.userName}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 line-through mt-0.5">{comment.body.length > 120 ? comment.body.substring(0, 120) + '...' : comment.body}</p>
+                                    <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-medium flex-wrap">
+                                      <span>Posted {new Date(comment.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                      {comment.deletedAt && (
+                                        <span className="text-red-400">
+                                          Deleted {new Date(comment.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                          {comment.deletedByName ? ` by ${comment.deletedByName}` : ''}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleRestoreComment(comment.id)}
+                                    className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1 flex-shrink-0"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                                    </svg>
+                                    Restore
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center border-t border-gray-100">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{q ? `No results for "${sectionSearch.deleted}"` : 'No deleted items'}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Registered Users */}
+          <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+            <button onClick={() => toggleSection('users')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-blue-50/30 transition-colors">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                </svg>
+                Registered Users ({uniqueUsers})
+              </h3>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${sectionOpen.users ? 'rotate-180' : ''}`}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+            {sectionOpen.users && (
+              <div>
+                {loadingLogins ? (
+                  <div className="p-12 text-center flex flex-col items-center border-t border-gray-100">
+                    <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Loading user data...</p>
+                  </div>
+                ) : (() => {
+                  const userMap = new Map<string, LoginRecord>();
+                  loginHistory.forEach(l => {
+                    const existing = userMap.get(l.email);
+                    if (!existing || new Date(l.loginAt) > new Date(existing.loginAt)) {
+                      userMap.set(l.email, l);
+                    }
+                  });
+                  let uniqueUserList = Array.from(userMap.values())
+                    .sort((a, b) => new Date(b.loginAt).getTime() - new Date(a.loginAt).getTime());
+
+                  const q = sectionSearch.users.toLowerCase();
+                  if (q) {
+                    uniqueUserList = uniqueUserList.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+                  }
+
+                  return (
+                    <div>
+                      {userMap.size > 3 && (
+                        <div className="px-6 pb-3">
+                          <div className="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            </svg>
+                            <input
+                              type="text"
+                              placeholder="Search users..."
+                              value={sectionSearch.users}
+                              onChange={e => setSectionSearchValue('users', e.target.value)}
+                              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 bg-gray-50/50"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {uniqueUserList.length > 0 ? (
+                        <div className="divide-y divide-gray-50 border-t border-gray-100 max-h-[500px] overflow-y-auto">
+                          {uniqueUserList.map((u) => {
+                            const loginCount = loginHistory.filter(l => l.email === u.email).length;
+                            const userIssueCount = issues.filter(i => i.createdBy === u.userId).length;
+                            return (
+                              <button
+                                key={u.email}
+                                onClick={() => setSelectedUser({ userId: u.userId, email: u.email, name: u.name, photoURL: u.photoURL })}
+                                className="w-full px-6 py-4 flex items-center gap-4 hover:bg-blue-50/50 transition-colors text-left group"
+                              >
+                                {u.photoURL ? (
+                                  <img src={u.photoURL} alt={u.name} className="w-11 h-11 rounded-xl object-cover border border-gray-200 flex-shrink-0 group-hover:border-blue-300 transition-colors" />
+                                ) : (
+                                  <div className="w-11 h-11 rounded-xl bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-400 group-hover:border-blue-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">{u.name}</span>
+                                    {u.email.toLowerCase() === 'notdev42@gmail.com' && (
+                                      <span className="text-[8px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">Admin</span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-400 font-medium truncate block">{u.email}</span>
+                                </div>
+                                <div className="flex items-center gap-4 flex-shrink-0">
+                                  <div className="text-center hidden md:block">
+                                    <div className="text-sm font-black text-gray-900">{loginCount}</div>
+                                    <div className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">Logins</div>
+                                  </div>
+                                  <div className="text-center hidden md:block">
+                                    <div className="text-sm font-black text-gray-900">{userIssueCount}</div>
+                                    <div className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">Reports</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-xs font-bold text-gray-600">
+                                      {new Date(u.loginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-medium">
+                                      {new Date(u.loginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  </div>
+                                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                  </svg>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center border-t border-gray-100">
+                          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{q ? `No results for "${sectionSearch.users}"` : 'No users yet'}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Login Activity */}
+          <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+            <button onClick={() => toggleSection('logins')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                Recent Login Activity ({loginHistory.length})
+              </h3>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${sectionOpen.logins ? 'rotate-180' : ''}`}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+            {sectionOpen.logins && (
+              <div>
+                {loginHistory.length > 5 && (
+                  <div className="px-6 pb-3">
+                    <div className="relative">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search login activity..."
+                        value={sectionSearch.logins}
+                        onChange={e => setSectionSearchValue('logins', e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-gray-300 focus:border-gray-300 bg-gray-50/50"
+                      />
+                    </div>
+                  </div>
+                )}
+                {(() => {
+                  const q = sectionSearch.logins.toLowerCase();
+                  const filtered = q ? loginHistory.filter(l => l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q)) : loginHistory;
+                  return filtered.length > 0 ? (
+                    <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto border-t border-gray-100">
+                      {filtered.slice(0, 100).map((login) => (
+                        <div key={login.id} className="px-6 py-3 flex items-center gap-3 text-xs">
+                          {login.photoURL ? (
+                            <img src={login.photoURL} alt="" className="w-7 h-7 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
+                          ) : (
+                            <div className="w-7 h-7 rounded-lg bg-gray-100 flex-shrink-0" />
+                          )}
+                          <span className="font-bold text-gray-700 truncate flex-1">{login.name}</span>
+                          <span className="text-gray-400 font-medium hidden md:inline">{login.email}</span>
+                          <span className="text-gray-400 font-medium flex-shrink-0">
+                            {new Date(login.loginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(login.loginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="text-[9px] text-gray-300 font-medium flex-shrink-0 hidden md:inline">
+                            {login.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center border-t border-gray-100">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{q ? `No results for "${sectionSearch.logins}"` : 'No login activity yet'}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       )}
