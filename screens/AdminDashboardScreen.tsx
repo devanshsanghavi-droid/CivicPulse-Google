@@ -53,14 +53,26 @@ function UserProfileModal({
     load();
   }, [userId]);
 
-  const handleBan = async (banType: BanType) => {
+  const [showBanForm, setShowBanForm] = useState(false);
+  const [banReason, setBanReason] = useState('');
+  const [banDurationValue, setBanDurationValue] = useState(24);
+  const [banDurationUnit, setBanDurationUnit] = useState<'hours' | 'days'>('hours');
+  const [banIsPermanent, setBanIsPermanent] = useState(false);
+
+  const handleBan = async () => {
     const targetId = userRecord?.id || userId;
-    const reason = window.prompt(`Reason for ${banType === 'permanent' ? 'permanent ban' : '3-day ban'}:`);
-    if (reason === null) return; // Cancelled
+    if (!banReason.trim()) return;
     setActionLoading(true);
     try {
-      await firestoreService.banUser(targetId, banType, reason);
+      if (banIsPermanent) {
+        await firestoreService.banUser(targetId, 'permanent', banReason.trim());
+      } else {
+        const hours = banDurationUnit === 'days' ? banDurationValue * 24 : banDurationValue;
+        await firestoreService.banUser(targetId, 'temporary', banReason.trim(), hours);
+      }
       await loadUserRecord();
+      setShowBanForm(false);
+      setBanReason('');
     } catch (err) {
       console.error('Ban failed:', err);
     } finally {
@@ -95,7 +107,7 @@ function UserProfileModal({
   };
 
   const isBanned = userRecord?.banType === 'permanent' || 
-    (userRecord?.banType === '3day' && userRecord?.bannedUntil && new Date(userRecord.bannedUntil) > new Date());
+    (userRecord?.banType === 'temporary' && userRecord?.bannedUntil && new Date(userRecord.bannedUntil) > new Date());
   const isAdmin = userRecord?.role === 'admin' || userRecord?.role === 'super_admin';
 
   return (
@@ -129,7 +141,7 @@ function UserProfileModal({
                 )}
                 {isBanned && (
                   <span className="text-[8px] font-black uppercase tracking-widest bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200 inline-block">
-                    {userRecord?.banType === 'permanent' ? 'Perma-banned' : 'Banned (3-day)'}
+                    {userRecord?.banType === 'permanent' ? 'Perma-banned' : `Banned until ${userRecord?.bannedUntil ? new Date(userRecord.bannedUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '?'}`}
                   </span>
                 )}
               </div>
@@ -157,7 +169,7 @@ function UserProfileModal({
             {isBanned && userRecord && (
               <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs space-y-1">
                 <div className="font-bold text-red-700">
-                  {userRecord.banType === 'permanent' ? 'Permanently Banned' : 'Temporarily Banned (3-Day)'}
+                  {userRecord.banType === 'permanent' ? 'Permanently Banned' : 'Temporarily Banned'}
                 </div>
                 {userRecord.banReason && (
                   <div className="text-red-600">Reason: {userRecord.banReason}</div>
@@ -165,7 +177,7 @@ function UserProfileModal({
                 {userRecord.bannedAt && (
                   <div className="text-red-500">Since: {new Date(userRecord.bannedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                 )}
-                {userRecord.banType === '3day' && userRecord.bannedUntil && (
+                {userRecord.banType === 'temporary' && userRecord.bannedUntil && (
                   <div className="text-red-500">Expires: {new Date(userRecord.bannedUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                 )}
               </div>
@@ -200,28 +212,16 @@ function UserProfileModal({
 
               {/* Ban Controls */}
               {!isBanned ? (
-                <>
-                  <button
-                    onClick={() => handleBan('3day')}
-                    disabled={actionLoading}
-                    className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    3-Day Ban
-                  </button>
-                  <button
-                    onClick={() => handleBan('permanent')}
-                    disabled={actionLoading}
-                    className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                    Permanent Ban
-                  </button>
-                </>
+                <button
+                  onClick={() => setShowBanForm(!showBanForm)}
+                  disabled={actionLoading}
+                  className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  Ban User
+                </button>
               ) : (
                 <button
                   onClick={handleUnban}
@@ -235,6 +235,69 @@ function UserProfileModal({
                 </button>
               )}
             </div>
+
+            {/* Expandable Ban Form */}
+            {showBanForm && (
+              <div className="bg-red-50/60 border border-red-100 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div>
+                  <label className="block text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Reason</label>
+                  <input
+                    type="text"
+                    value={banReason}
+                    onChange={e => setBanReason(e.target.value)}
+                    placeholder="E.g., Spamming, Harassment, Misinformation"
+                    className="w-full px-3 py-2 border border-red-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-300"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={banIsPermanent}
+                      onChange={e => setBanIsPermanent(e.target.checked)}
+                      className="w-4 h-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                    />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-red-700">Permanent</span>
+                  </label>
+                </div>
+                {!banIsPermanent && (
+                  <div className="flex items-center gap-2">
+                    <label className="block text-[9px] font-black text-red-600 uppercase tracking-widest flex-shrink-0">Duration</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={banDurationUnit === 'days' ? 365 : 8760}
+                      value={banDurationValue}
+                      onChange={e => setBanDurationValue(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 px-3 py-2 border border-red-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-300 text-center"
+                    />
+                    <select
+                      value={banDurationUnit}
+                      onChange={e => setBanDurationUnit(e.target.value as 'hours' | 'days')}
+                      className="px-3 py-2 border border-red-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-red-300 appearance-none cursor-pointer"
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                    </select>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={handleBan}
+                    disabled={!banReason.trim() || actionLoading}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg font-black uppercase text-[9px] tracking-widest hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {actionLoading ? 'Banning...' : banIsPermanent ? 'Permanent Ban' : `Ban for ${banDurationValue} ${banDurationUnit}`}
+                  </button>
+                  <button
+                    onClick={() => { setShowBanForm(false); setBanReason(''); }}
+                    className="px-4 py-2 border border-gray-200 bg-white text-gray-500 rounded-lg font-black uppercase text-[9px] tracking-widest hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {actionLoading && (
               <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
@@ -375,6 +438,21 @@ export default function AdminDashboardScreen() {
   // User profile modal
   const [selectedUser, setSelectedUser] = useState<{ userId: string; email: string; name: string; photoURL?: string } | null>(null);
 
+  // Banned users list
+  const [bannedUsers, setBannedUsers] = useState<UserRecord[]>([]);
+  const [loadingBanned, setLoadingBanned] = useState(false);
+
+  const refreshBannedUsers = async () => {
+    setLoadingBanned(true);
+    try {
+      setBannedUsers(await firestoreService.getBannedUsers());
+    } catch (err) {
+      console.error('Failed to load banned users:', err);
+    } finally {
+      setLoadingBanned(false);
+    }
+  };
+
   const refreshIssues = async () => {
     try {
       setIssues(await firestoreService.getIssues('newest'));
@@ -400,6 +478,7 @@ export default function AdminDashboardScreen() {
         }
       };
       loadLogins();
+      refreshBannedUsers();
     }
   }, [tab]);
 
@@ -811,6 +890,91 @@ export default function AdminDashboardScreen() {
               <div className="text-[9px] text-gray-400 uppercase font-black tracking-widest mt-1">Total Votes</div>
             </div>
           </div>
+
+          {/* Banned Users */}
+          {(bannedUsers.length > 0 || loadingBanned) && (
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 mb-3 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                Banned Users ({bannedUsers.length})
+              </h3>
+              <div className="bg-white border border-red-100 rounded-3xl overflow-hidden shadow-sm">
+                {loadingBanned ? (
+                  <div className="p-8 text-center">
+                    <svg className="animate-spin h-6 w-6 text-red-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-red-50">
+                    {bannedUsers.map(bu => {
+                      const remaining = bu.banType === 'temporary' && bu.bannedUntil
+                        ? (() => {
+                            const ms = new Date(bu.bannedUntil).getTime() - Date.now();
+                            const hrs = Math.floor(ms / (1000 * 60 * 60));
+                            const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+                            if (hrs > 24) return `${Math.floor(hrs / 24)}d ${hrs % 24}h left`;
+                            if (hrs > 0) return `${hrs}h ${mins}m left`;
+                            return `${mins}m left`;
+                          })()
+                        : null;
+                      return (
+                        <div key={bu.id} className="px-6 py-4 flex items-center gap-4">
+                          {bu.photoURL ? (
+                            <img src={bu.photoURL} alt={bu.name} className="w-10 h-10 rounded-xl object-cover border border-red-200 flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex-shrink-0 flex items-center justify-center text-red-400">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-gray-900 truncate">{bu.name}</span>
+                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+                                bu.banType === 'permanent' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-orange-100 text-orange-700 border-orange-200'
+                              }`}>
+                                {bu.banType === 'permanent' ? 'Permanent' : remaining}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-400 font-medium block truncate">{bu.email}</span>
+                            {bu.banReason && (
+                              <span className="text-[10px] text-red-500 font-medium block mt-0.5">Reason: {bu.banReason}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await firestoreService.unbanUser(bu.id);
+                                  await refreshBannedUsers();
+                                } catch (err) {
+                                  console.error('Unban failed:', err);
+                                }
+                              }}
+                              className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-all flex items-center gap-1"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                              </svg>
+                              Unban
+                            </button>
+                            <button
+                              onClick={() => setSelectedUser({ userId: bu.id, email: bu.email, name: bu.name, photoURL: bu.photoURL })}
+                              className="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-all"
+                            >
+                              Profile
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Unique Users Table */}
           <div>

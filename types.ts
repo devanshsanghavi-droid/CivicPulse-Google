@@ -109,7 +109,7 @@ export interface LoginRecord {
   userAgent: string;
 }
 
-export type BanType = 'none' | '3day' | 'permanent';
+export type BanType = 'none' | 'temporary' | 'permanent';
 
 export interface UserRecord {
   id: string;            // Firestore doc ID (same as userId)
@@ -119,7 +119,7 @@ export interface UserRecord {
   role: UserRole;
   banType: BanType;
   bannedAt?: string;     // ISO date when ban was applied
-  bannedUntil?: string;  // ISO date when ban expires (null for permanent)
+  bannedUntil?: string;  // ISO date when ban expires (empty for permanent)
   banReason?: string;
   createdAt: string;
   lastLoginAt: string;

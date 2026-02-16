@@ -266,18 +266,22 @@ export const firestoreService = {
     await updateDoc(doc(db, 'users', userId), { role });
   },
 
-  banUser: async (userId: string, banType: BanType, reason?: string): Promise<void> => {
+  /**
+   * Ban a user. For temporary bans, pass durationHours.
+   * For permanent bans, omit durationHours.
+   */
+  banUser: async (userId: string, banType: BanType, reason?: string, durationHours?: number): Promise<void> => {
     const now = new Date();
     const updates: Record<string, any> = {
       banType,
       bannedAt: now.toISOString(),
       banReason: reason || ''
     };
-    if (banType === '3day') {
-      const expiry = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    if (banType === 'temporary' && durationHours) {
+      const expiry = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
       updates.bannedUntil = expiry.toISOString();
     } else if (banType === 'permanent') {
-      updates.bannedUntil = 'permanent';
+      updates.bannedUntil = '';
     }
     await updateDoc(doc(db, 'users', userId), updates);
   },
@@ -292,7 +296,7 @@ export const firestoreService = {
   },
 
   /**
-   * Check if a user is currently banned. Handles expired 3-day bans automatically.
+   * Check if a user is currently banned. Handles expired temporary bans automatically.
    * Returns { banned: true, reason, expiresAt } or { banned: false }
    */
   checkBanStatus: async (userId: string): Promise<{ banned: boolean; reason?: string; expiresAt?: string; type?: BanType }> => {
@@ -303,10 +307,10 @@ export const firestoreService = {
       return { banned: true, reason: userRec.banReason, type: 'permanent' };
     }
 
-    if (userRec.banType === '3day' && userRec.bannedUntil) {
+    if (userRec.banType === 'temporary' && userRec.bannedUntil) {
       const expiryDate = new Date(userRec.bannedUntil);
       if (expiryDate > new Date()) {
-        return { banned: true, reason: userRec.banReason, expiresAt: userRec.bannedUntil, type: '3day' };
+        return { banned: true, reason: userRec.banReason, expiresAt: userRec.bannedUntil, type: 'temporary' };
       } else {
         // Ban expired, auto-unban
         await firestoreService.unbanUser(userId);
@@ -320,5 +324,27 @@ export const firestoreService = {
   getAllUserRecords: async (): Promise<UserRecord[]> => {
     const snapshot = await getDocs(collection(db, 'users'));
     return snapshot.docs.map(d => ({ ...d.data(), id: d.id } as UserRecord));
+  },
+
+  /**
+   * Get all currently banned users (temporary + permanent).
+   * Auto-unbans expired temporary bans before returning.
+   */
+  getBannedUsers: async (): Promise<UserRecord[]> => {
+    const q = query(collection(db, 'users'), where('banType', 'in', ['temporary', 'permanent']));
+    const snapshot = await getDocs(q);
+    const bannedUsers: UserRecord[] = [];
+    const now = new Date();
+
+    for (const d of snapshot.docs) {
+      const rec = { ...d.data(), id: d.id } as UserRecord;
+      // Auto-unban expired temp bans
+      if (rec.banType === 'temporary' && rec.bannedUntil && new Date(rec.bannedUntil) <= now) {
+        await firestoreService.unbanUser(rec.id);
+        continue;
+      }
+      bannedUsers.push(rec);
+    }
+    return bannedUsers;
   }
 };
