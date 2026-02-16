@@ -261,19 +261,62 @@ export default function ReportScreen() {
   };
 
   const MAX_PHOTOS = 4;
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+    setDuplicateWarning(null);
     
     const remaining = MAX_PHOTOS - photos.length;
     const newFiles = Array.from(files).slice(0, remaining);
-    
-    newFiles.forEach(file => {
-      setPhotoFiles(prev => [...prev, file]);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotos(prev => [...prev, reader.result as string]);
-      reader.readAsDataURL(file);
+    let skipped = 0;
+
+    // Read all files, then batch-add only non-duplicates
+    const readers: Promise<{ file: File; dataUrl: string }>[] = newFiles.map(file => 
+      new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve({ file, dataUrl: reader.result as string });
+        reader.readAsDataURL(file);
+      })
+    );
+
+    Promise.all(readers).then(results => {
+      const newPhotos: string[] = [];
+      const newPhotoFiles: File[] = [];
+
+      // Collect the current state to check against
+      setPhotos(prevPhotos => {
+        setPhotoFiles(prevFiles => {
+          const existingDataUrls = new Set(prevPhotos);
+
+          results.forEach(({ file, dataUrl }) => {
+            // Check 1: same file metadata (name + size + lastModified)
+            const isDuplicateFile = prevFiles.some(
+              existing => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+            );
+            // Check 2: identical image content
+            const isDuplicateContent = existingDataUrls.has(dataUrl);
+
+            if (isDuplicateFile || isDuplicateContent) {
+              skipped++;
+            } else {
+              existingDataUrls.add(dataUrl);
+              newPhotos.push(dataUrl);
+              newPhotoFiles.push(file);
+            }
+          });
+
+          if (skipped > 0) {
+            setDuplicateWarning(`${skipped} duplicate photo${skipped > 1 ? 's' : ''} skipped`);
+            setTimeout(() => setDuplicateWarning(null), 3000);
+          }
+
+          return [...prevFiles, ...newPhotoFiles];
+        });
+
+        return [...prevPhotos, ...newPhotos];
+      });
     });
 
     // Reset the input so the same file can be re-selected if removed
@@ -343,9 +386,16 @@ export default function ReportScreen() {
           <div className="text-left">
             <h3 className="font-black text-sm uppercase tracking-widest mb-2 text-blue-600">Visual Evidence</h3>
             <p className="text-gray-500 text-sm leading-relaxed mb-2">High-fidelity imagery significantly expedites city resolution times. You can also skip this step if a photo isn't available.</p>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
-              {photos.length}/{MAX_PHOTOS} photos added
-            </p>
+            <div className="flex items-center gap-3 mb-6">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                {photos.length}/{MAX_PHOTOS} photos added
+              </p>
+              {duplicateWarning && (
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest animate-pulse">
+                  {duplicateWarning}
+                </p>
+              )}
+            </div>
 
             {photos.length > 0 && (
               <div className={`grid gap-3 mb-4 ${photos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
