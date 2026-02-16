@@ -93,6 +93,28 @@ export const firestoreService = {
     });
   },
 
+  deleteIssue: async (id: string): Promise<void> => {
+    await updateDoc(doc(db, 'issues', id), { hidden: true, updatedAt: new Date().toISOString() });
+  },
+
+  getIssuesByUser: async (userId: string): Promise<Issue[]> => {
+    const q = query(collection(db, 'issues'), where('createdBy', '==', userId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map(d => ({ ...d.data(), id: d.id } as Issue))
+      .filter(i => !i.hidden)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  getCommentsByUser: async (userId: string): Promise<Comment[]> => {
+    const q = query(collection(db, 'comments'), where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map(d => ({ ...d.data(), id: d.id } as Comment))
+      .filter(c => !c.hidden)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
   // ─── Upvotes ───────────────────────────────────────────────────
   toggleUpvote: async (issueId: string, userId: string): Promise<void> => {
     const q = query(
