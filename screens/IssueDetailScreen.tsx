@@ -98,7 +98,18 @@ export default function IssueDetailScreen({ id }: { id: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
           </svg>
         </button>
-        <img src={issue.photos[0]?.url} className="w-full aspect-[16/9] object-cover" alt={issue.title} />
+        {issue.photos[0]?.url ? (
+          <img src={issue.photos[0].url} className="w-full aspect-[16/9] object-cover" alt={issue.title} />
+        ) : (
+          <div className="w-full aspect-[16/9] bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-16 h-16 text-gray-200 mx-auto mb-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75Z" />
+              </svg>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-300">No photo attached</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-8">

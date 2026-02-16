@@ -114,7 +114,15 @@ export default function FeedScreen() {
             className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer"
           >
             <div className="aspect-[16/10] relative">
-              <img src={issue.photos[0]?.url} alt={issue.title} className="w-full h-full object-cover" />
+              {issue.photos[0]?.url ? (
+                <img src={issue.photos[0].url} alt={issue.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 text-gray-200">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75Z" />
+                  </svg>
+                </div>
+              )}
               <div className="absolute top-3 left-3">
                 <StatusBadge status={issue.status} />
               </div>
