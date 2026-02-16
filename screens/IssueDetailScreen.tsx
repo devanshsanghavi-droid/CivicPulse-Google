@@ -12,6 +12,14 @@ export default function IssueDetailScreen({ id }: { id: string }) {
   const [newComment, setNewComment] = useState('');
   const [hasUpvoted, setHasUpvoted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isBanned, setIsBanned] = useState(false);
+
+  // Check ban status for comment restriction
+  useEffect(() => {
+    if (user) {
+      firestoreService.checkBanStatus(user.id).then(result => setIsBanned(result.banned)).catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,21 +205,27 @@ export default function IssueDetailScreen({ id }: { id: string }) {
             )}
           </div>
 
-          <div className="sticky bottom-4 bg-white/95 border border-gray-100 rounded-2xl p-2 shadow-xl backdrop-blur flex gap-2">
-            <input 
-              placeholder="Contribute information..." 
-              className="flex-1 px-4 py-3 outline-none text-sm bg-transparent"
-              value={newComment}
-              onChange={e => setNewComment(e.target.value)}
-            />
-            <button 
-              onClick={handleComment}
-              disabled={!newComment.trim()}
-              className="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              Post
-            </button>
-          </div>
+          {isBanned ? (
+            <div className="sticky bottom-4 bg-red-50 border border-red-100 rounded-2xl p-4 text-center">
+              <p className="text-xs font-bold text-red-600">Your account is restricted from commenting.</p>
+            </div>
+          ) : (
+            <div className="sticky bottom-4 bg-white/95 border border-gray-100 rounded-2xl p-2 shadow-xl backdrop-blur flex gap-2">
+              <input 
+                placeholder="Contribute information..." 
+                className="flex-1 px-4 py-3 outline-none text-sm bg-transparent"
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+              />
+              <button 
+                onClick={handleComment}
+                disabled={!newComment.trim()}
+                className="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                Post
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

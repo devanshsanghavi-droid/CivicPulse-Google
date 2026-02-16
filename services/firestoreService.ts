@@ -1,12 +1,12 @@
 // Firestore service — shared cloud database for all users
 // Replaces localStorage-based mockApi for issues, comments, and upvotes
 import {
-  collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc,
+  collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, setDoc,
   query, where, onSnapshot, Unsubscribe
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebaseConfig';
-import { Issue, Comment, Upvote, IssueStatus, IssuePhoto, LoginRecord } from '../types';
+import { Issue, Comment, Upvote, IssueStatus, IssuePhoto, LoginRecord, UserRecord, UserRole, BanType } from '../types';
 import { TRENDING_WEIGHT_UPVOTES, TRENDING_RECENCY_DAYS } from '../constants';
 
 // Shared trending score calculation
@@ -221,5 +221,104 @@ export const firestoreService = {
       .map(d => ({ ...d.data(), id: d.id } as LoginRecord))
       .sort((a, b) => new Date(b.loginAt).getTime() - new Date(a.loginAt).getTime())
       .slice(0, limit);
+  },
+
+  // ─── User Management (ban, promote, etc.) ───────────────────────
+  upsertUserRecord: async (data: Omit<UserRecord, 'id'>& { id: string }): Promise<void> => {
+    const userRef = doc(db, 'users', data.id);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      // Only update lastLoginAt + name/photo, preserve role & ban status
+      await updateDoc(userRef, {
+        name: data.name,
+        photoURL: data.photoURL || '',
+        lastLoginAt: data.lastLoginAt
+      });
+    } else {
+      // Brand new user — default role: resident, no ban
+      await setDoc(userRef, {
+        email: data.email,
+        name: data.name,
+        photoURL: data.photoURL || '',
+        role: 'resident' as UserRole,
+        banType: 'none' as BanType,
+        createdAt: data.createdAt,
+        lastLoginAt: data.lastLoginAt
+      });
+    }
+  },
+
+  getUserRecord: async (userId: string): Promise<UserRecord | null> => {
+    const snap = await getDoc(doc(db, 'users', userId));
+    if (snap.exists()) return { ...snap.data(), id: snap.id } as UserRecord;
+    return null;
+  },
+
+  getUserRecordByEmail: async (email: string): Promise<UserRecord | null> => {
+    const q = query(collection(db, 'users'), where('email', '==', email));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const d = snapshot.docs[0];
+    return { ...d.data(), id: d.id } as UserRecord;
+  },
+
+  setUserRole: async (userId: string, role: UserRole): Promise<void> => {
+    await updateDoc(doc(db, 'users', userId), { role });
+  },
+
+  banUser: async (userId: string, banType: BanType, reason?: string): Promise<void> => {
+    const now = new Date();
+    const updates: Record<string, any> = {
+      banType,
+      bannedAt: now.toISOString(),
+      banReason: reason || ''
+    };
+    if (banType === '3day') {
+      const expiry = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      updates.bannedUntil = expiry.toISOString();
+    } else if (banType === 'permanent') {
+      updates.bannedUntil = 'permanent';
+    }
+    await updateDoc(doc(db, 'users', userId), updates);
+  },
+
+  unbanUser: async (userId: string): Promise<void> => {
+    await updateDoc(doc(db, 'users', userId), {
+      banType: 'none',
+      bannedAt: '',
+      bannedUntil: '',
+      banReason: ''
+    });
+  },
+
+  /**
+   * Check if a user is currently banned. Handles expired 3-day bans automatically.
+   * Returns { banned: true, reason, expiresAt } or { banned: false }
+   */
+  checkBanStatus: async (userId: string): Promise<{ banned: boolean; reason?: string; expiresAt?: string; type?: BanType }> => {
+    const userRec = await firestoreService.getUserRecord(userId);
+    if (!userRec || userRec.banType === 'none') return { banned: false };
+
+    if (userRec.banType === 'permanent') {
+      return { banned: true, reason: userRec.banReason, type: 'permanent' };
+    }
+
+    if (userRec.banType === '3day' && userRec.bannedUntil) {
+      const expiryDate = new Date(userRec.bannedUntil);
+      if (expiryDate > new Date()) {
+        return { banned: true, reason: userRec.banReason, expiresAt: userRec.bannedUntil, type: '3day' };
+      } else {
+        // Ban expired, auto-unban
+        await firestoreService.unbanUser(userId);
+        return { banned: false };
+      }
+    }
+
+    return { banned: false };
+  },
+
+  getAllUserRecords: async (): Promise<UserRecord[]> => {
+    const snapshot = await getDocs(collection(db, 'users'));
+    return snapshot.docs.map(d => ({ ...d.data(), id: d.id } as UserRecord));
   }
 };

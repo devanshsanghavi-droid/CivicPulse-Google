@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { firestoreService } from '../services/firestoreService';
-import { Issue, IssueStatus, LoginRecord, Comment } from '../types';
+import { Issue, IssueStatus, LoginRecord, Comment, UserRecord, BanType, UserRole } from '../types';
 import { CATEGORIES, CITY_NAME } from '../constants';
 
 // ─── User Profile Modal ───────────────────────────────────────────
@@ -15,6 +15,8 @@ function UserProfileModal({
   const [userIssues, setUserIssues] = useState<Issue[]>([]);
   const [userComments, setUserComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRecord, setUserRecord] = useState<UserRecord | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const userLogins = loginHistory.filter(l => l.email === email);
   const firstSeen = userLogins.length > 0 
@@ -24,15 +26,21 @@ function UserProfileModal({
     ? userLogins[0].loginAt 
     : null;
 
+  const loadUserRecord = async () => {
+    // Try by userId first, then by email
+    let rec = await firestoreService.getUserRecord(userId);
+    if (!rec) rec = await firestoreService.getUserRecordByEmail(email);
+    setUserRecord(rec);
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        // We need to find issues by this user. Since userId might vary (localStorage IDs),
-        // we search by creatorName or iterate all issues. But we have the userId from login records.
         const [issues, comments] = await Promise.all([
           firestoreService.getIssuesByUser(userId),
-          firestoreService.getCommentsByUser(userId)
+          firestoreService.getCommentsByUser(userId),
+          loadUserRecord()
         ]);
         setUserIssues(issues);
         setUserComments(comments);
@@ -44,6 +52,51 @@ function UserProfileModal({
     };
     load();
   }, [userId]);
+
+  const handleBan = async (banType: BanType) => {
+    const targetId = userRecord?.id || userId;
+    const reason = window.prompt(`Reason for ${banType === 'permanent' ? 'permanent ban' : '3-day ban'}:`);
+    if (reason === null) return; // Cancelled
+    setActionLoading(true);
+    try {
+      await firestoreService.banUser(targetId, banType, reason);
+      await loadUserRecord();
+    } catch (err) {
+      console.error('Ban failed:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    const targetId = userRecord?.id || userId;
+    setActionLoading(true);
+    try {
+      await firestoreService.unbanUser(targetId);
+      await loadUserRecord();
+    } catch (err) {
+      console.error('Unban failed:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSetRole = async (role: UserRole) => {
+    const targetId = userRecord?.id || userId;
+    setActionLoading(true);
+    try {
+      await firestoreService.setUserRole(targetId, role);
+      await loadUserRecord();
+    } catch (err) {
+      console.error('Role change failed:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isBanned = userRecord?.banType === 'permanent' || 
+    (userRecord?.banType === '3day' && userRecord?.bannedUntil && new Date(userRecord.bannedUntil) > new Date());
+  const isAdmin = userRecord?.role === 'admin' || userRecord?.role === 'super_admin';
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
@@ -66,9 +119,20 @@ function UserProfileModal({
             <div>
               <h3 className="text-xl font-black text-gray-900 tracking-tight">{name}</h3>
               <p className="text-sm text-gray-400 font-medium">{email}</p>
-              {email.toLowerCase() === 'notdev42@gmail.com' && (
-                <span className="text-[8px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200 mt-1 inline-block">Super Admin</span>
-              )}
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                {userRecord?.role && (
+                  <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border inline-block ${
+                    userRecord.role === 'super_admin' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                    userRecord.role === 'admin' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                    'bg-gray-100 text-gray-600 border-gray-200'
+                  }`}>{userRecord.role.replace('_', ' ')}</span>
+                )}
+                {isBanned && (
+                  <span className="text-[8px] font-black uppercase tracking-widest bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200 inline-block">
+                    {userRecord?.banType === 'permanent' ? 'Perma-banned' : 'Banned (3-day)'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
@@ -79,6 +143,107 @@ function UserProfileModal({
         </div>
 
         <div className="p-8 space-y-8">
+          {/* ─── Admin Actions Panel ─────────────────────────────── */}
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              User Management
+            </h4>
+
+            {/* Ban Status Detail */}
+            {isBanned && userRecord && (
+              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs space-y-1">
+                <div className="font-bold text-red-700">
+                  {userRecord.banType === 'permanent' ? 'Permanently Banned' : 'Temporarily Banned (3-Day)'}
+                </div>
+                {userRecord.banReason && (
+                  <div className="text-red-600">Reason: {userRecord.banReason}</div>
+                )}
+                {userRecord.bannedAt && (
+                  <div className="text-red-500">Since: {new Date(userRecord.bannedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                )}
+                {userRecord.banType === '3day' && userRecord.bannedUntil && (
+                  <div className="text-red-500">Expires: {new Date(userRecord.bannedUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                )}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              {/* Role Controls */}
+              {!isAdmin ? (
+                <button
+                  onClick={() => handleSetRole('admin')}
+                  disabled={actionLoading}
+                  className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6.203c-.099.32-.155.657-.155 1.008 0 5.488 3.99 10.06 9.33 10.815a11.963 11.963 0 0 0 9.33-10.815c0-.351-.056-.688-.155-1.008a11.959 11.959 0 0 1-8.402-4.239Z" />
+                  </svg>
+                  Promote to Admin
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSetRole('resident')}
+                  disabled={actionLoading}
+                  className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  Demote to Resident
+                </button>
+              )}
+
+              {/* Ban Controls */}
+              {!isBanned ? (
+                <>
+                  <button
+                    onClick={() => handleBan('3day')}
+                    disabled={actionLoading}
+                    className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    3-Day Ban
+                  </button>
+                  <button
+                    onClick={() => handleBan('permanent')}
+                    disabled={actionLoading}
+                    className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    Permanent Ban
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleUnban}
+                  disabled={actionLoading}
+                  className="text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                  </svg>
+                  Remove Ban
+                </button>
+              )}
+            </div>
+
+            {actionLoading && (
+              <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Updating...
+              </div>
+            )}
+          </div>
+
           {/* Quick stats */}
           <div className="grid grid-cols-4 gap-3">
             <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl text-center">
@@ -424,7 +589,7 @@ export default function AdminDashboardScreen() {
           </div>
 
           {/* Issues List */}
-          <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
             {filteredIssues.length > 0 ? (
               <div className="divide-y divide-gray-50">
                 {filteredIssues.map(issue => (
@@ -442,8 +607,8 @@ export default function AdminDashboardScreen() {
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h4 className="font-bold text-gray-900 text-sm truncate">{issue.title}</h4>
                           <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
-                            issue.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' : 
-                            issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
+                           issue.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' : 
+                           issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
                           }`}>{issue.status}</span>
                         </div>
                         <p className="text-xs text-gray-500 truncate mb-2">{issue.description}</p>
@@ -453,7 +618,7 @@ export default function AdminDashboardScreen() {
                               <img src={issue.creatorPhotoURL} alt="" className="w-4 h-4 rounded-full object-cover" />
                             ) : null}
                             {issue.creatorName}
-                          </span>
+                         </span>
                           <span>{CATEGORIES.find(c => c.id === issue.categoryId)?.name}</span>
                           <span>{new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                           <span>{issue.upvoteCount} votes</span>
@@ -508,19 +673,19 @@ export default function AdminDashboardScreen() {
                         )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
+                        </div>
+                  ))}
+            </div>
+          ) : (
               <div className="p-16 text-center flex flex-col items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 text-gray-200 mb-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
                 <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
                   {issueFilter === 'all' ? 'No reports yet' : `No ${issueFilter} reports`}
                 </p>
-              </div>
-            )}
+            </div>
+          )}
           </div>
         </div>
       )}
@@ -530,7 +695,7 @@ export default function AdminDashboardScreen() {
         <div className="space-y-6">
           {/* Config + Generate */}
           <div className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="white" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
@@ -540,29 +705,29 @@ export default function AdminDashboardScreen() {
                 <h3 className="font-black text-lg text-gray-900 tracking-tight">Weekly Email Digest</h3>
                 <p className="text-xs text-gray-400 font-medium">Generate a professional briefing for city leadership</p>
               </div>
-            </div>
-
+              </div>
+              
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
+                <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Recipient Email</label>
-                <input 
-                  type="text"
+                  <input 
+                    type="text"
                   className="w-full px-4 py-3 border border-gray-100 bg-gray-50 rounded-xl text-sm font-medium focus:bg-white focus:border-blue-300 outline-none transition-all"
-                  value={recipientEmail}
-                  onChange={e => setRecipientEmail(e.target.value)}
-                  placeholder="E.g. executive@city.gov"
-                />
-              </div>
-              <div>
+                    value={recipientEmail}
+                    onChange={e => setRecipientEmail(e.target.value)}
+                    placeholder="E.g. executive@city.gov"
+                  />
+                </div>
+                <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Subject Line</label>
-                <input 
-                  type="text"
+                  <input 
+                    type="text"
                   className="w-full px-4 py-3 border border-gray-100 bg-gray-50 rounded-xl text-sm font-medium focus:bg-white focus:border-blue-300 outline-none transition-all"
-                  value={customTitle}
-                  onChange={e => setCustomTitle(e.target.value)}
-                />
-              </div>
-            </div>
+                    value={customTitle}
+                    onChange={e => setCustomTitle(e.target.value)}
+                  />
+                </div>
+                </div>
 
             <button 
               onClick={handleGenerateDigest}
@@ -584,7 +749,7 @@ export default function AdminDashboardScreen() {
               )}
             </button>
             {issues.length === 0 && <p className="text-[10px] text-gray-400 font-bold">No reports available to include in the digest.</p>}
-          </div>
+              </div>
 
           {/* Email Preview */}
           {digestHtml && (
@@ -592,21 +757,21 @@ export default function AdminDashboardScreen() {
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Email Preview</h3>
                 <div className="flex gap-2">
-                  <button 
-                    onClick={handleSendDigest}
+                <button 
+                  onClick={handleSendDigest}
                     className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
-                  >
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
                     </svg>
                     Copy HTML
-                  </button>
-                  <button 
+                </button>
+                <button 
                     onClick={() => setDigestHtml('')}
                     className="px-4 py-2.5 border border-gray-200 rounded-xl font-black uppercase text-[10px] tracking-widest text-gray-400 hover:bg-gray-50 transition-colors"
-                  >
-                    Discard
-                  </button>
+                >
+                  Discard
+                </button>
                 </div>
               </div>
               <div className="bg-gray-100 rounded-3xl p-6 border border-gray-200">
@@ -726,7 +891,7 @@ export default function AdminDashboardScreen() {
                   <div className="p-16 text-center flex flex-col items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 text-gray-200 mb-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                    </svg>
+          </svg>
                     <p className="text-xs font-bold uppercase tracking-widest text-gray-400">No users yet</p>
                   </div>
                 );

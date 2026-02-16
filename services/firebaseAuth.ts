@@ -26,6 +26,8 @@ export const signInWithGoogle = async (): Promise<User> => {
     // Create or get user in our system (passes photoURL + auto-detects admin)
     const user = mockApi.signup(email, 'firebase-google-sso', name, photoURL);
     
+    const now = new Date().toISOString();
+
     // Log the login event to Firestore for admin visibility
     try {
       await firestoreService.logLogin({
@@ -33,11 +35,27 @@ export const signInWithGoogle = async (): Promise<User> => {
         email,
         name,
         photoURL,
-        loginAt: new Date().toISOString(),
+        loginAt: now,
         userAgent: navigator.userAgent
       });
     } catch (e) {
       console.warn('Failed to log login event:', e);
+    }
+
+    // Create or update user record in Firestore (for ban/role management)
+    try {
+      await firestoreService.upsertUserRecord({
+        id: user.id,
+        email,
+        name,
+        photoURL,
+        role: user.role,
+        banType: 'none',
+        createdAt: now,
+        lastLoginAt: now
+      });
+    } catch (e) {
+      console.warn('Failed to upsert user record:', e);
     }
     
     return user;

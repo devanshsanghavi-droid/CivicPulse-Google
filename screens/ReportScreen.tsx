@@ -18,8 +18,16 @@ export default function ReportScreen() {
   const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [banInfo, setBanInfo] = useState<{ banned: boolean; reason?: string; expiresAt?: string; type?: string } | null>(null);
   const miniMapContainerRef = useRef<HTMLDivElement>(null);
   const miniMapInstanceRef = useRef<any>(null);
+
+  // Check ban status
+  useEffect(() => {
+    if (user) {
+      firestoreService.checkBanStatus(user.id).then(setBanInfo).catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -30,6 +38,34 @@ export default function ReportScreen() {
       );
     }
   }, []);
+
+  // If user is banned, show a message instead of the report form
+  if (banInfo?.banned) {
+    return (
+      <div className="p-8 max-w-xl mx-auto min-h-[60vh] flex flex-col items-center justify-center text-center">
+        <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-red-600">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 tracking-tight mb-2">Account Restricted</h2>
+        <p className="text-sm text-gray-500 mb-4 max-w-sm leading-relaxed">
+          Your account has been {banInfo.type === 'permanent' ? 'permanently' : 'temporarily'} restricted from posting.
+        </p>
+        {banInfo.reason && (
+          <p className="text-xs text-gray-400 mb-2">Reason: {banInfo.reason}</p>
+        )}
+        {banInfo.expiresAt && (
+          <p className="text-xs text-gray-400 mb-6">
+            Restriction expires: {new Date(banInfo.expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </p>
+        )}
+        <button onClick={() => setScreen('feed')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-6 py-3 rounded-full hover:bg-blue-100 transition-colors">
+          Return to Feed
+        </button>
+      </div>
+    );
+  }
 
   // Initialize mini-map when step 3 is reached
   useEffect(() => {
