@@ -101,22 +101,41 @@ export default function IssueDetailScreen({ id }: { id: string }) {
         </button>
         {issue.photos.length > 0 ? (
           <div className="relative">
-            <img src={issue.photos[activePhotoIndex]?.url} className="w-full aspect-[16/9] object-cover" alt={issue.title} />
+            <img 
+              key={`photo-${activePhotoIndex}-${issue.photos[activePhotoIndex]?.id}`} 
+              src={issue.photos[activePhotoIndex]?.url} 
+              className="w-full aspect-[16/9] object-cover" 
+              alt={`${issue.title} - Photo ${activePhotoIndex + 1}`} 
+            />
             
             {/* Photo navigation arrows */}
             {issue.photos.length > 1 && (
               <>
                 <button
-                  onClick={() => setActivePhotoIndex(prev => prev > 0 ? prev - 1 : issue.photos.length - 1)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setActivePhotoIndex(prev => {
+                      const next = prev > 0 ? prev - 1 : issue.photos.length - 1;
+                      return next;
+                    });
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors z-10"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                   </svg>
                 </button>
                 <button
-                  onClick={() => setActivePhotoIndex(prev => prev < issue.photos.length - 1 ? prev + 1 : 0)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setActivePhotoIndex(prev => {
+                      const next = prev < issue.photos.length - 1 ? prev + 1 : 0;
+                      return next;
+                    });
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors z-10"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -124,11 +143,15 @@ export default function IssueDetailScreen({ id }: { id: string }) {
                 </button>
 
                 {/* Dot indicators */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                  {issue.photos.map((_, idx) => (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                  {issue.photos.map((photo, idx) => (
                     <button
-                      key={idx}
-                      onClick={() => setActivePhotoIndex(idx)}
+                      key={photo.id || idx}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setActivePhotoIndex(idx);
+                      }}
                       className={`rounded-full transition-all ${
                         idx === activePhotoIndex 
                           ? 'w-6 h-2 bg-white' 

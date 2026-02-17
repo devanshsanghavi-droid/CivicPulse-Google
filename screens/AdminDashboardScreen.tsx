@@ -14,7 +14,7 @@ function UserProfileModal({
   userId: string; email: string; name: string; photoURL?: string; loginHistory: LoginRecord[];
   onClose: () => void;
 }) {
-  const { user: adminUser } = useApp();
+  const { user: adminUser, setScreen, setSelectedIssueId } = useApp();
   const [userIssues, setUserIssues] = useState<Issue[]>([]);
   const [userComments, setUserComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -356,17 +356,34 @@ function UserProfileModal({
             ) : userIssues.length > 0 ? (
               <div className="space-y-3">
                 {userIssues.map(issue => (
-                  <div key={issue.id} className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-start gap-4">
-                    {issue.photos[0]?.url && (
+                  <div 
+                    key={issue.id} 
+                    onClick={() => {
+                      setSelectedIssueId(issue.id);
+                      setScreen('issue-detail');
+                      onClose();
+                    }}
+                    className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-start gap-4 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-[0.99] group/card"
+                  >
+                    {issue.photos[0]?.url ? (
                       <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-16 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-300">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                        </svg>
+                      </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-sm text-gray-900 truncate">{issue.title}</span>
+                        <span className="font-bold text-sm text-gray-900 truncate group-hover/card:text-blue-700 transition-colors">{issue.title}</span>
                         <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
                           issue.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' : 
                           issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
                         }`}>{issue.status}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 text-gray-300 group-hover/card:text-blue-500 transition-colors ml-auto flex-shrink-0">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                        </svg>
                       </div>
                       <p className="text-xs text-gray-500 truncate">{issue.description}</p>
                       <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 font-medium">
@@ -388,31 +405,58 @@ function UserProfileModal({
             <div>
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3">Comments by {name.split(' ')[0]}</h4>
               <div className="space-y-2">
-                {userComments.slice(0, 10).map(c => (
-                  <div key={c.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm group">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-gray-700 leading-relaxed flex-1">{c.body}</p>
-                      <button
-                        onClick={async () => {
-                          if (!window.confirm('Delete this comment? You can restore it later from the Deleted Items section.')) return;
-                          try {
-                            await firestoreService.deleteComment(c.id, adminUser?.name || 'Admin');
-                            setUserComments(prev => prev.filter(cc => cc.id !== c.id));
-                          } catch (err) {
-                            console.error('Failed to delete comment:', err);
-                          }
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0 p-1 rounded-lg hover:bg-red-50"
-                        title="Delete comment"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                {userComments.slice(0, 10).map(c => {
+                  const parentIssue = userIssues.find(i => i.id === c.issueId);
+                  return (
+                    <div 
+                      key={c.id} 
+                      className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm group cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all"
+                      onClick={() => {
+                        setSelectedIssueId(c.issueId);
+                        setScreen('issue-detail');
+                        onClose();
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-700 leading-relaxed">{c.body}</p>
+                          {parentIssue && (
+                            <span className="text-[10px] text-blue-500 font-bold mt-1 inline-flex items-center gap-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+                              </svg>
+                              on "{parentIssue.title}"
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!window.confirm('Delete this comment? You can restore it later from the Deleted Items section.')) return;
+                            try {
+                              await firestoreService.deleteComment(c.id, adminUser?.name || 'Admin');
+                              setUserComments(prev => prev.filter(cc => cc.id !== c.id));
+                            } catch (err) {
+                              console.error('Failed to delete comment:', err);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0 p-1 rounded-lg hover:bg-red-50"
+                          title="Delete comment"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[10px] text-gray-400 font-medium">{new Date(c.createdAt).toLocaleDateString()}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-gray-300 group-hover:text-blue-500 transition-colors">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                         </svg>
-                      </button>
+                      </div>
                     </div>
-                    <span className="text-[10px] text-gray-400 font-medium mt-1 block">{new Date(c.createdAt).toLocaleDateString()}</span>
-                  </div>
-                ))}
+                  );
+                })}
                 {userComments.length > 10 && (
                   <p className="text-[10px] text-gray-400 font-bold text-center">+ {userComments.length - 10} more comments</p>
                 )}
@@ -446,7 +490,7 @@ function UserProfileModal({
 
 // ─── Main Admin Dashboard ─────────────────────────────────────────
 export default function AdminDashboardScreen() {
-  const { user } = useApp();
+  const { user, setScreen, setSelectedIssueId } = useApp();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [tab, setTab] = useState<'issues' | 'digest' | 'details'>('issues');
   const [digestHtml, setDigestHtml] = useState('');
@@ -753,17 +797,35 @@ export default function AdminDashboardScreen() {
                 {filteredIssues.map(issue => (
                   <div key={issue.id} className="px-6 py-5 hover:bg-gray-50/50 transition-colors">
                     <div className="flex items-start gap-4">
-                      {/* Photo thumbnail */}
-                      {issue.photos[0]?.url ? (
-                        <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover flex-shrink-0 border border-gray-100" />
-                      ) : (
-                        <div className="w-16 h-12 rounded-xl bg-gray-100 flex-shrink-0" />
-                      )}
+                      {/* Photo thumbnail - clickable */}
+                      <div 
+                        className="flex-shrink-0 cursor-pointer"
+                        onClick={() => {
+                          setSelectedIssueId(issue.id);
+                          setScreen('issue-detail');
+                        }}
+                      >
+                        {issue.photos[0]?.url ? (
+                          <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover border border-gray-100 hover:border-blue-300 transition-colors" />
+                        ) : (
+                          <div className="w-16 h-12 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors flex items-center justify-center text-gray-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h4 className="font-bold text-gray-900 text-sm truncate">{issue.title}</h4>
+                          <h4 
+                            className="font-bold text-gray-900 text-sm truncate cursor-pointer hover:text-blue-700 transition-colors"
+                            onClick={() => {
+                              setSelectedIssueId(issue.id);
+                              setScreen('issue-detail');
+                            }}
+                          >{issue.title}</h4>
                           <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
                            issue.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' : 
                            issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
