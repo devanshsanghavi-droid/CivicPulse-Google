@@ -91,18 +91,18 @@ export default function IssueDetailScreen({ id }: { id: string }) {
 
   return (
     <div className="pb-24 max-w-2xl mx-auto bg-white min-h-screen md:min-h-0 md:rounded-3xl md:my-8 md:shadow-sm overflow-hidden border border-gray-100">
-      <div className="relative">
-        <button 
-          onClick={() => setScreen(previousScreen === 'issue-detail' ? 'feed' : (previousScreen || 'feed'))}
-          className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur w-10 h-10 rounded-full shadow-sm flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-          </svg>
-        </button>
-        {issue.photos.length > 0 ? (
+      {/* Photo gallery - only rendered when photos exist */}
+      {issue.photos.length > 0 ? (
+        <div className="relative">
+          <button 
+            onClick={() => setScreen(previousScreen === 'issue-detail' ? 'feed' : (previousScreen || 'feed'))}
+            className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur w-10 h-10 rounded-full shadow-sm flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+          </button>
           <div className="relative overflow-hidden">
-            {/* Photo strip - shows one photo at a time */}
             <div className="relative w-full aspect-[16/9]">
               {issue.photos.map((photo, idx) => (
                 <img 
@@ -116,7 +116,6 @@ export default function IssueDetailScreen({ id }: { id: string }) {
               ))}
             </div>
             
-            {/* Photo navigation arrows */}
             {issue.photos.length > 1 && (
               <>
                 <button
@@ -136,7 +135,6 @@ export default function IssueDetailScreen({ id }: { id: string }) {
                   </svg>
                 </button>
 
-                {/* Dot indicators */}
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                   {issue.photos.map((photo, idx) => (
                     <button
@@ -151,24 +149,27 @@ export default function IssueDetailScreen({ id }: { id: string }) {
                   ))}
                 </div>
 
-                {/* Photo counter */}
                 <div className="absolute top-3 right-14 bg-black/40 text-white text-[10px] font-black px-2.5 py-1 rounded-full backdrop-blur-sm z-10">
                   {activePhotoIndex + 1} / {issue.photos.length}
                 </div>
               </>
             )}
           </div>
-        ) : (
-          <div className="w-full aspect-[16/9] bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-            <div className="text-center">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-16 h-16 text-gray-200 mx-auto mb-2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75Z" />
-              </svg>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-300">No photo attached</p>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* No photo — compact back bar only */
+        <div className="px-6 pt-5 pb-2 flex items-center gap-3 border-b border-gray-50">
+          <button 
+            onClick={() => setScreen(previousScreen === 'issue-detail' ? 'feed' : (previousScreen || 'feed'))}
+            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Report Details</span>
+        </div>
+      )}
 
       <div className="p-8">
         <div className="flex justify-between items-start mb-6">

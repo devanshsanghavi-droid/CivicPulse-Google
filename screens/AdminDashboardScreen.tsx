@@ -365,14 +365,8 @@ function UserProfileModal({
                     }}
                     className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-start gap-4 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-[0.99] group/card"
                   >
-                    {issue.photos[0]?.url ? (
+                    {issue.photos[0]?.url && (
                       <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-16 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-gray-300">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
-                        </svg>
-                      </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -805,17 +799,11 @@ export default function AdminDashboardScreen() {
                           setScreen('issue-detail');
                         }}
                       >
-                        <div className="flex-shrink-0">
-                          {issue.photos[0]?.url ? (
+                        {issue.photos[0]?.url && (
+                          <div className="flex-shrink-0">
                             <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover border border-gray-100 group-hover/issue:border-blue-300 transition-colors" />
-                          ) : (
-                            <div className="w-16 h-12 rounded-xl bg-gray-100 group-hover/issue:bg-blue-50 transition-colors flex items-center justify-center text-gray-300">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
-                              </svg>
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">

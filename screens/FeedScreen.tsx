@@ -113,33 +113,31 @@ export default function FeedScreen() {
             }}
             className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer"
           >
-            <div className="aspect-[16/10] relative">
-              {issue.photos[0]?.url ? (
+            {/* Only show image area when photos exist */}
+            {issue.photos[0]?.url && (
+              <div className="aspect-[16/10] relative">
                 <img src={issue.photos[0].url} alt={issue.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 text-gray-200">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75Z" />
-                  </svg>
+                <div className="absolute top-3 left-3">
+                  <StatusBadge status={issue.status} />
                 </div>
-              )}
-              <div className="absolute top-3 left-3">
-                <StatusBadge status={issue.status} />
+                {issue.photos.length > 1 && (
+                  <div className="absolute top-3 right-3 bg-black/50 text-white text-[10px] font-black px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                    </svg>
+                    {issue.photos.length}
+                  </div>
+                )}
               </div>
-              {issue.photos.length > 1 && (
-                <div className="absolute top-3 right-3 bg-black/50 text-white text-[10px] font-black px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
-                  </svg>
-                  {issue.photos.length}
-                </div>
-              )}
-            </div>
+            )}
             <div className="p-5">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-[10px] text-blue-600 font-black uppercase tracking-widest">
-                  {CATEGORIES.find(c => c.id === issue.categoryId)?.name}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-blue-600 font-black uppercase tracking-widest">
+                    {CATEGORIES.find(c => c.id === issue.categoryId)?.name}
+                  </span>
+                  {!issue.photos[0]?.url && <StatusBadge status={issue.status} />}
+                </div>
                 <span className="text-[10px] text-gray-400 font-bold">
                   {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
