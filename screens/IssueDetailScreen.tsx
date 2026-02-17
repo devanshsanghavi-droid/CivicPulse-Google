@@ -14,6 +14,9 @@ export default function IssueDetailScreen({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [isBanned, setIsBanned] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [showEndorsers, setShowEndorsers] = useState(false);
+  const [endorsers, setEndorsers] = useState<{ id: string; name: string; email: string; photoURL?: string }[]>([]);
+  const [loadingEndorsers, setLoadingEndorsers] = useState(false);
 
   // Check ban status for comment restriction
   useEffect(() => {
@@ -320,12 +323,88 @@ export default function IssueDetailScreen({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Floating Action Bar (Mobile Only Style or Unified) */}
+      {/* Endorser list panel — admin only */}
+      {isAdmin && showEndorsers && (
+        <div className="border-t border-gray-100 bg-gray-50/50">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                All Endorsers ({endorsers.length})
+              </h4>
+              <button
+                onClick={() => setShowEndorsers(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {loadingEndorsers ? (
+              <div className="flex justify-center py-4">
+                <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              </div>
+            ) : endorsers.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No endorsements yet</p>
+            ) : (
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                {endorsers.map(e => (
+                  <div key={e.id} className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 border border-gray-100">
+                    {e.photoURL ? (
+                      <img src={e.photoURL} alt={e.name} className="w-7 h-7 rounded-full object-cover border border-gray-200" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 text-gray-400">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-gray-900 truncate block">{e.name}</span>
+                      {e.email && <span className="text-[10px] text-gray-400 truncate block">{e.email}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 px-6 py-4 flex items-center justify-between z-50 md:sticky md:bottom-0 md:border-none md:bg-gray-50 md:px-8">
         <div className="flex items-center gap-4">
           <div className="text-left">
             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Community Priority</div>
-            <div className="text-xl font-black text-gray-900 tracking-tight">{issue.upvoteCount} Endorsements</div>
+            {isAdmin ? (
+              <button
+                onClick={async () => {
+                  if (showEndorsers) {
+                    setShowEndorsers(false);
+                    return;
+                  }
+                  setShowEndorsers(true);
+                  setLoadingEndorsers(true);
+                  try {
+                    const data = await firestoreService.getIssueUpvoters(id);
+                    setEndorsers(data);
+                  } catch (err) {
+                    console.error('Failed to load endorsers:', err);
+                  } finally {
+                    setLoadingEndorsers(false);
+                  }
+                }}
+                className="text-xl font-black text-gray-900 tracking-tight hover:text-blue-600 transition-colors flex items-center gap-2 group"
+                title="View all endorsers"
+              >
+                {issue.upvoteCount} Endorsements
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-transform ${showEndorsers ? 'rotate-180' : ''}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                </svg>
+              </button>
+            ) : (
+              <div className="text-xl font-black text-gray-900 tracking-tight">{issue.upvoteCount} Endorsements</div>
+            )}
           </div>
         </div>
         <button 

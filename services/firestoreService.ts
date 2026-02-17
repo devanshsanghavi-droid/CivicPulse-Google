@@ -173,6 +173,29 @@ export const firestoreService = {
     return !snapshot.empty;
   },
 
+  /** Get all users who upvoted a specific issue (admin feature) */
+  getIssueUpvoters: async (issueId: string): Promise<{ id: string; name: string; email: string; photoURL?: string }[]> => {
+    const q = query(collection(db, 'upvotes'), where('issueId', '==', issueId));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+
+    const userIds = snapshot.docs.map(d => d.data().userId as string);
+    const results: { id: string; name: string; email: string; photoURL?: string }[] = [];
+
+    // Resolve user records in parallel
+    await Promise.all(userIds.map(async (uid) => {
+      const userSnap = await getDoc(doc(db, 'users', uid));
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        results.push({ id: uid, name: data.name || 'Unknown', email: data.email || '', photoURL: data.photoURL });
+      } else {
+        results.push({ id: uid, name: 'Unknown User', email: '' });
+      }
+    }));
+
+    return results.sort((a, b) => a.name.localeCompare(b.name));
+  },
+
   // ─── Comments ──────────────────────────────────────────────────
   getComments: async (issueId: string): Promise<Comment[]> => {
     const q = query(
