@@ -6,7 +6,7 @@ import { Issue, Comment } from '../types';
 import { CATEGORIES } from '../constants';
 
 export default function IssueDetailScreen({ id }: { id: string }) {
-  const { user, setScreen, isAdmin } = useApp();
+  const { user, setScreen, setSelectedIssueId, isAdmin, previousScreen } = useApp();
   const [issue, setIssue] = useState<Issue | undefined>(undefined);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -24,6 +24,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    setActivePhotoIndex(0); // Reset photo index when navigating to a new issue
     const loadData = async () => {
       if (!id) return;
       setLoading(true);
@@ -92,34 +93,34 @@ export default function IssueDetailScreen({ id }: { id: string }) {
     <div className="pb-24 max-w-2xl mx-auto bg-white min-h-screen md:min-h-0 md:rounded-3xl md:my-8 md:shadow-sm overflow-hidden border border-gray-100">
       <div className="relative">
         <button 
-          onClick={() => setScreen('feed')}
-          className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur w-10 h-10 rounded-full shadow-sm flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
+          onClick={() => setScreen(previousScreen === 'issue-detail' ? 'feed' : (previousScreen || 'feed'))}
+          className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur w-10 h-10 rounded-full shadow-sm flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
           </svg>
         </button>
         {issue.photos.length > 0 ? (
-          <div className="relative">
-            <img 
-              key={`photo-${activePhotoIndex}-${issue.photos[activePhotoIndex]?.id}`} 
-              src={issue.photos[activePhotoIndex]?.url} 
-              className="w-full aspect-[16/9] object-cover" 
-              alt={`${issue.title} - Photo ${activePhotoIndex + 1}`} 
-            />
+          <div className="relative overflow-hidden">
+            {/* Photo strip - shows one photo at a time */}
+            <div className="relative w-full aspect-[16/9]">
+              {issue.photos.map((photo, idx) => (
+                <img 
+                  key={photo.id || `photo-${idx}`} 
+                  src={photo.url} 
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                    idx === activePhotoIndex ? 'opacity-100 z-[1]' : 'opacity-0 z-0'
+                  }`}
+                  alt={`${issue.title} - Photo ${idx + 1}`} 
+                />
+              ))}
+            </div>
             
             {/* Photo navigation arrows */}
             {issue.photos.length > 1 && (
               <>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setActivePhotoIndex(prev => {
-                      const next = prev > 0 ? prev - 1 : issue.photos.length - 1;
-                      return next;
-                    });
-                  }}
+                  onClick={() => setActivePhotoIndex(activePhotoIndex > 0 ? activePhotoIndex - 1 : issue.photos.length - 1)}
                   className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors z-10"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
@@ -127,14 +128,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
                   </svg>
                 </button>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setActivePhotoIndex(prev => {
-                      const next = prev < issue.photos.length - 1 ? prev + 1 : 0;
-                      return next;
-                    });
-                  }}
+                  onClick={() => setActivePhotoIndex(activePhotoIndex < issue.photos.length - 1 ? activePhotoIndex + 1 : 0)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center backdrop-blur-sm transition-colors z-10"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
@@ -147,11 +141,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
                   {issue.photos.map((photo, idx) => (
                     <button
                       key={photo.id || idx}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        setActivePhotoIndex(idx);
-                      }}
+                      onClick={() => setActivePhotoIndex(idx)}
                       className={`rounded-full transition-all ${
                         idx === activePhotoIndex 
                           ? 'w-6 h-2 bg-white' 
@@ -162,7 +152,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
                 </div>
 
                 {/* Photo counter */}
-                <div className="absolute top-3 right-14 bg-black/40 text-white text-[10px] font-black px-2.5 py-1 rounded-full backdrop-blur-sm">
+                <div className="absolute top-3 right-14 bg-black/40 text-white text-[10px] font-black px-2.5 py-1 rounded-full backdrop-blur-sm z-10">
                   {activePhotoIndex + 1} / {issue.photos.length}
                 </div>
               </>
@@ -234,7 +224,7 @@ export default function IssueDetailScreen({ id }: { id: string }) {
             </div>
           </div>
           <button 
-            onClick={() => setScreen('map')}
+            onClick={() => { setSelectedIssueId(id); setScreen('map'); }}
             className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline px-2 py-1"
           >
             Expand Map

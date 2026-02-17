@@ -18,6 +18,7 @@ interface AppContextType {
   user: User | null;
   setUser: (u: User | null) => void;
   currentScreen: string;
+  previousScreen: string;
   setScreen: (s: string) => void;
   selectedIssueId: string | null;
   setSelectedIssueId: (id: string | null) => void;
@@ -36,7 +37,8 @@ export const useApp = () => {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(mockApi.getCurrentUser());
-  const [currentScreen, setScreen] = useState('landing');
+  const [currentScreen, setScreenInternal] = useState('landing');
+  const [previousScreen, setPreviousScreen] = useState('landing');
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -75,6 +77,11 @@ export default function App() {
     const interval = setInterval(refreshNotifs, 5000);
     return () => clearInterval(interval);
   }, [user]);
+
+  const setScreen = (screen: string) => {
+    setPreviousScreen(currentScreen);
+    setScreenInternal(screen);
+  };
 
   const handleScreenChange = (screen: string) => {
     if ((screen === 'map' || screen === 'report') && !locationExplained) {
@@ -194,7 +201,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={{ 
-      user, setUser, currentScreen, setScreen: handleScreenChange, 
+      user, setUser, currentScreen, previousScreen, setScreen: handleScreenChange, 
       selectedIssueId, setSelectedIssueId, isAdmin,
       notifs, refreshNotifs
     }}>

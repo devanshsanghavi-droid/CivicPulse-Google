@@ -795,37 +795,32 @@ export default function AdminDashboardScreen() {
             {filteredIssues.length > 0 ? (
               <div className="divide-y divide-gray-50">
                 {filteredIssues.map(issue => (
-                  <div key={issue.id} className="px-6 py-5 hover:bg-gray-50/50 transition-colors">
+                  <div key={issue.id} className="px-6 py-5 hover:bg-blue-50/30 transition-colors group/issue">
                     <div className="flex items-start gap-4">
-                      {/* Photo thumbnail - clickable */}
+                      {/* Photo thumbnail + Content - all clickable */}
                       <div 
-                        className="flex-shrink-0 cursor-pointer"
+                        className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer"
                         onClick={() => {
                           setSelectedIssueId(issue.id);
                           setScreen('issue-detail');
                         }}
                       >
-                        {issue.photos[0]?.url ? (
-                          <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover border border-gray-100 hover:border-blue-300 transition-colors" />
-                        ) : (
-                          <div className="w-16 h-12 rounded-xl bg-gray-100 hover:bg-blue-50 transition-colors flex items-center justify-center text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
+                        <div className="flex-shrink-0">
+                          {issue.photos[0]?.url ? (
+                            <img src={issue.photos[0].url} alt="" className="w-16 h-12 rounded-xl object-cover border border-gray-100 group-hover/issue:border-blue-300 transition-colors" />
+                          ) : (
+                            <div className="w-16 h-12 rounded-xl bg-gray-100 group-hover/issue:bg-blue-50 transition-colors flex items-center justify-center text-gray-300">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h4 
-                            className="font-bold text-gray-900 text-sm truncate cursor-pointer hover:text-blue-700 transition-colors"
-                            onClick={() => {
-                              setSelectedIssueId(issue.id);
-                              setScreen('issue-detail');
-                            }}
-                          >{issue.title}</h4>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <h4 className="font-bold text-gray-900 text-sm truncate group-hover/issue:text-blue-700 transition-colors">{issue.title}</h4>
                           <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
                            issue.status === 'resolved' ? 'bg-green-50 text-green-700 border-green-100' : 
                            issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' : 'bg-red-50 text-red-700 border-red-100'
@@ -843,6 +838,7 @@ export default function AdminDashboardScreen() {
                           <span>{new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                           <span>{issue.upvoteCount} votes</span>
                         </div>
+                      </div>
                       </div>
 
                       {/* Actions */}
@@ -1198,35 +1194,43 @@ export default function AdminDashboardScreen() {
                             </div>
                             <div className="divide-y divide-gray-50">
                               {filteredIssuesDel.map(issue => (
-                                <div key={issue.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
-                                  {issue.photos[0]?.url ? (
-                                    <img src={issue.photos[0].url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 grayscale" />
-                                  ) : (
-                                    <div className="w-14 h-10 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
-                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-bold text-sm text-gray-600 truncate line-through">{issue.title}</span>
-                                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
-                                        issue.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' :
-                                        issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 'bg-red-50 text-red-600 border-red-100'
-                                      }`}>{issue.status}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-400 truncate mt-0.5">{issue.description}</p>
-                                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
-                                      <span>By {issue.creatorName}</span>
-                                      <span>{CATEGORIES.find(c => c.id === issue.categoryId)?.name || 'General'}</span>
-                                      <span>{issue.upvoteCount} votes</span>
-                                      {issue.deletedAt && (
-                                        <span className="text-red-400">
-                                          Deleted {new Date(issue.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                          {issue.deletedByName ? ` by ${issue.deletedByName}` : ''}
-                                        </span>
-                                      )}
+                                <div key={issue.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity group/del">
+                                  <div 
+                                    className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() => { setSelectedIssueId(issue.id); setScreen('issue-detail'); }}
+                                  >
+                                    {issue.photos[0]?.url ? (
+                                      <img src={issue.photos[0].url} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-200 grayscale group-hover/del:grayscale-0 transition-all" />
+                                    ) : (
+                                      <div className="w-14 h-10 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3 21h18M3 3h18" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-bold text-sm text-gray-600 truncate line-through group-hover/del:text-blue-600 transition-colors">{issue.title}</span>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                                          issue.status === 'resolved' ? 'bg-green-50 text-green-600 border-green-100' :
+                                          issue.status === 'acknowledged' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 'bg-red-50 text-red-600 border-red-100'
+                                        }`}>{issue.status}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-gray-300 group-hover/del:text-blue-500 transition-colors ml-auto">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                        </svg>
+                                      </div>
+                                      <p className="text-xs text-gray-400 truncate mt-0.5">{issue.description}</p>
+                                      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-gray-400 font-medium flex-wrap">
+                                        <span>By {issue.creatorName}</span>
+                                        <span>{CATEGORIES.find(c => c.id === issue.categoryId)?.name || 'General'}</span>
+                                        <span>{issue.upvoteCount} votes</span>
+                                        {issue.deletedAt && (
+                                          <span className="text-red-400">
+                                            Deleted {new Date(issue.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            {issue.deletedByName ? ` by ${issue.deletedByName}` : ''}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   <button
@@ -1250,29 +1254,37 @@ export default function AdminDashboardScreen() {
                             </div>
                             <div className="divide-y divide-gray-50">
                               {filteredCommentsDel.map(comment => (
-                                <div key={comment.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity">
-                                  {comment.userPhotoURL ? (
-                                    <img src={comment.userPhotoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 flex-shrink-0 grayscale" />
-                                  ) : (
-                                    <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
-                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                                      </svg>
-                                    </div>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-bold text-xs text-gray-500">{comment.userName}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-400 line-through mt-0.5">{comment.body.length > 120 ? comment.body.substring(0, 120) + '...' : comment.body}</p>
-                                    <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-medium flex-wrap">
-                                      <span>Posted {new Date(comment.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                      {comment.deletedAt && (
-                                        <span className="text-red-400">
-                                          Deleted {new Date(comment.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                          {comment.deletedByName ? ` by ${comment.deletedByName}` : ''}
-                                        </span>
-                                      )}
+                                <div key={comment.id} className="px-6 py-4 flex items-start gap-4 opacity-75 hover:opacity-100 transition-opacity group/delc">
+                                  <div 
+                                    className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() => { setSelectedIssueId(comment.issueId); setScreen('issue-detail'); }}
+                                  >
+                                    {comment.userPhotoURL ? (
+                                      <img src={comment.userPhotoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-gray-200 flex-shrink-0 grayscale group-hover/delc:grayscale-0 transition-all" />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center text-gray-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                                        </svg>
+                                      </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-xs text-gray-500 group-hover/delc:text-blue-600 transition-colors">{comment.userName}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-gray-300 group-hover/delc:text-blue-500 transition-colors ml-auto">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                        </svg>
+                                      </div>
+                                      <p className="text-xs text-gray-400 line-through mt-0.5">{comment.body.length > 120 ? comment.body.substring(0, 120) + '...' : comment.body}</p>
+                                      <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400 font-medium flex-wrap">
+                                        <span>Posted {new Date(comment.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                        {comment.deletedAt && (
+                                          <span className="text-red-400">
+                                            Deleted {new Date(comment.deletedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            {comment.deletedByName ? ` by ${comment.deletedByName}` : ''}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   <button
@@ -1458,13 +1470,17 @@ export default function AdminDashboardScreen() {
                   return filtered.length > 0 ? (
                     <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto border-t border-gray-100">
                       {filtered.slice(0, 100).map((login) => (
-                        <div key={login.id} className="px-6 py-3 flex items-center gap-3 text-xs">
+                        <button 
+                          key={login.id} 
+                          onClick={() => setSelectedUser({ userId: login.userId, email: login.email, name: login.name, photoURL: login.photoURL })}
+                          className="w-full px-6 py-3 flex items-center gap-3 text-xs hover:bg-blue-50/50 transition-colors text-left group/login"
+                        >
                           {login.photoURL ? (
-                            <img src={login.photoURL} alt="" className="w-7 h-7 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
+                            <img src={login.photoURL} alt="" className="w-7 h-7 rounded-lg object-cover border border-gray-100 flex-shrink-0 group-hover/login:border-blue-300 transition-colors" />
                           ) : (
-                            <div className="w-7 h-7 rounded-lg bg-gray-100 flex-shrink-0" />
+                            <div className="w-7 h-7 rounded-lg bg-gray-100 flex-shrink-0 group-hover/login:bg-blue-50 transition-colors" />
                           )}
-                          <span className="font-bold text-gray-700 truncate flex-1">{login.name}</span>
+                          <span className="font-bold text-gray-700 truncate flex-1 group-hover/login:text-blue-600 transition-colors">{login.name}</span>
                           <span className="text-gray-400 font-medium hidden md:inline">{login.email}</span>
                           <span className="text-gray-400 font-medium flex-shrink-0">
                             {new Date(login.loginAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(login.loginAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
@@ -1472,7 +1488,10 @@ export default function AdminDashboardScreen() {
                           <span className="text-[9px] text-gray-300 font-medium flex-shrink-0 hidden md:inline">
                             {login.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'}
                           </span>
-                        </div>
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3 text-gray-200 group-hover/login:text-blue-500 transition-colors flex-shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </button>
                       ))}
                     </div>
                   ) : (
