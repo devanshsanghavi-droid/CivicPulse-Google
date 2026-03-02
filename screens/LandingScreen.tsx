@@ -1,53 +1,53 @@
 
 import React from 'react';
 import { useApp } from '../App';
-import { ContainerScroll } from '../components/ui/container-scroll-animation';
 
 export default function LandingScreen() {
   const { setScreen, user } = useApp();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center transition-colors">
-      {/* Hero Section with Container Scroll Animation */}
-      <ContainerScroll
-        titleComponent={
-          <div>
-            <p className="text-sm font-semibold text-blue-600 uppercase tracking-widest mb-4">
-              Los Altos Community Platform
-            </p>
-            <h1 className="text-5xl md:text-7xl font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-6">
-              Fix Your City,<br />
-              <span className="text-blue-600">Together.</span>
-            </h1>
-            <p className="text-xl text-gray-500 dark:text-slate-400 max-w-2xl mx-auto mb-8">
-              Report issues, rally your neighbors, and watch problems get resolved.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => setScreen('feed')}
-                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Browse Issues
-              </button>
-              {!user && (
-                <button
-                  onClick={() => setScreen('login')}
-                  className="border-2 border-blue-600 text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Join CivicPulse
-                </button>
-              )}
-            </div>
-          </div>
-        }
-      >
-        {/* Styled preview image */}
-        <img
-          src="https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?w=1400&q=80"
-          alt="CivicPulse feed preview"
-          className="w-full h-full object-cover object-top rounded-xl"
-        />
-      </ContainerScroll>
+      {/* Hero Section */}
+      <section className="pt-20 pb-16 px-6 text-center max-w-4xl mx-auto">
+        <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-slate-800 text-blue-600 px-4 py-1.5 rounded-full text-sm font-medium border border-blue-100 dark:border-slate-700 mb-8 animate-fade-in">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6.203c-.099.32-.155.657-.155 1.008 0 5.488 3.99 10.06 9.33 10.815a11.963 11.963 0 0 0 9.33-10.815c0-.351-.056-.688-.155-1.008a11.959 11.959 0 0 1-8.402-4.239Z" />
+          </svg>
+          Community-Powered City Improvement
+        </div>
+
+        <h1 className="text-6xl md:text-7xl font-black text-blue-600 mb-6 tracking-tight">
+          CivicPulse
+        </h1>
+
+        <p className="text-xl text-gray-500 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+          Report issues in your city. Upvote what matters.<br className="hidden md:block" />
+          Make your community better, together.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <button
+            onClick={() => setScreen('feed')}
+            className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-blue-200 dark:shadow-blue-900/30 hover:bg-blue-700 transition-all flex items-center gap-2 group"
+          >
+            Browse Issues
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 group-hover:translate-x-1 transition-transform">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </button>
+          {!user && (
+            <button
+              onClick={() => setScreen('login')}
+              className="flex items-center gap-2 text-gray-600 dark:text-slate-400 font-bold px-8 py-4 hover:text-blue-600 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
+              Sign In / Join
+            </button>
+          )}
+        </div>
+      </section>
 
       {/* Features Grid */}
       <section className="py-16 px-6 w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">

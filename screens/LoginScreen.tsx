@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../App';
 import { signInWithGoogle } from '../services/firebaseAuth';
-import { SplineScene } from '../components/ui/splite';
+import { AnimatedBlobBackground } from '../components/ui/animated-blob-background';
 import { Spotlight } from '../components/ui/spotlight';
 
 export default function LoginScreen() {
@@ -27,7 +27,10 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex">
+    <div className="min-h-screen bg-black flex relative overflow-hidden">
+
+      {/* Full-page blob background (subtle base layer) */}
+      <AnimatedBlobBackground className="z-0" />
 
       {/* Left side — login form */}
       <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-16 relative z-10">
@@ -43,7 +46,7 @@ export default function LoginScreen() {
           </div>
 
           {/* Login card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8">
             <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
             <p className="text-slate-400 text-sm mb-8">Sign in to report and track issues in your community</p>
 
@@ -93,12 +96,9 @@ export default function LoginScreen() {
         </div>
       </div>
 
-      {/* Right side — Spline 3D */}
-      <div className="hidden md:flex w-1/2 relative bg-black">
-        <SplineScene
-          scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-          className="w-full h-full"
-        />
+      {/* Right side — Animated blob background (more visible on this half) */}
+      <div className="hidden md:block w-1/2 relative z-[1]">
+        <AnimatedBlobBackground />
       </div>
 
     </div>
