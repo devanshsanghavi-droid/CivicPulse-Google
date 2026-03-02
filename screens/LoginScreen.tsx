@@ -1,14 +1,24 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { signInWithGoogle } from '../services/firebaseAuth';
 import { AnimatedBlobBackground } from '../components/ui/animated-blob-background';
+import { BlobCharacter } from '../components/ui/blob-character';
 import { Spotlight } from '../components/ui/spotlight';
 
 export default function LoginScreen() {
   const { setUser, setScreen } = useApp();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkDark = () => setIsDark(document.documentElement.classList.contains('dark'));
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -27,10 +37,10 @@ export default function LoginScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex relative overflow-hidden">
+    <div className="min-h-screen flex relative overflow-hidden">
 
-      {/* Full-page blob background (subtle base layer) */}
-      <AnimatedBlobBackground className="z-0" />
+      {/* Full-page blob background — theme-aware */}
+      <AnimatedBlobBackground className="z-0" variant={isDark ? 'dark' : 'light'} />
 
       {/* Left side — login form */}
       <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-16 relative z-10">
@@ -39,22 +49,22 @@ export default function LoginScreen() {
         <div className="max-w-md w-full mx-auto">
           {/* CivicPulse logo/wordmark */}
           <div className="mb-8">
-            <h1 className="text-3xl font-black text-white tracking-tight">
-              Civic<span className="text-blue-500">Pulse</span>
+            <h1 className="text-3xl font-black tracking-tight">
+              <span className="text-gray-900 dark:text-white">Civic</span><span className="text-blue-500">Pulse</span>
             </h1>
-            <p className="text-slate-400 mt-2 text-sm">Los Altos Community Platform</p>
+            <p className="text-gray-500 dark:text-slate-400 mt-2 text-sm">Los Altos Community Platform</p>
           </div>
 
-          {/* Login card */}
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
-            <p className="text-slate-400 text-sm mb-8">Sign in to report and track issues in your community</p>
+          {/* Login card — light: white + border, dark: glassmorphism */}
+          <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl border border-gray-200 dark:border-slate-800 rounded-2xl p-8 shadow-lg dark:shadow-none">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome back</h2>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mb-8">Sign in to report and track issues in your community</p>
 
             {/* Google Sign In button */}
             <button
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-6 rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 dark:bg-white dark:hover:bg-gray-100 text-gray-900 font-semibold py-3 px-6 rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 dark:border-transparent"
             >
               {isLoading ? (
                 <>
@@ -66,7 +76,6 @@ export default function LoginScreen() {
                 </>
               ) : (
                 <>
-                  {/* Google G icon SVG */}
                   <svg width="18" height="18" viewBox="0 0 18 18">
                     <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
                     <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" />
@@ -79,26 +88,26 @@ export default function LoginScreen() {
             </button>
 
             {error && (
-              <p className="text-red-400 text-sm text-center mt-4">{error}</p>
+              <p className="text-red-500 dark:text-red-400 text-sm text-center mt-4">{error}</p>
             )}
           </div>
 
-          <p className="text-slate-600 text-xs text-center mt-6">
+          <p className="text-gray-400 dark:text-slate-600 text-xs text-center mt-6">
             By signing in you agree to our Terms of Service
           </p>
 
           <button
             onClick={() => setScreen('landing')}
-            className="mt-6 w-full text-center text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] hover:text-blue-500 transition-colors"
+            className="mt-6 w-full text-center text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-[0.3em] hover:text-blue-500 transition-colors"
           >
             Return to Hub
           </button>
         </div>
       </div>
 
-      {/* Right side — Animated blob background (more visible on this half) */}
-      <div className="hidden md:block w-1/2 relative z-[1]">
-        <AnimatedBlobBackground />
+      {/* Right side — Blob character floating over ambient background */}
+      <div className="hidden md:flex w-1/2 relative z-[1] items-center justify-center">
+        <BlobCharacter className="relative z-10" />
       </div>
 
     </div>

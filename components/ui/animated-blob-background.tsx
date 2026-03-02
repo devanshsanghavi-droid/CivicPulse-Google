@@ -29,11 +29,20 @@ const blobKeyframes = `
 
 interface AnimatedBlobBackgroundProps {
     className?: string;
+    /** 'light' uses pale blue base + low opacity blobs, 'dark' uses navy base + higher opacity */
+    variant?: 'light' | 'dark';
 }
 
-export function AnimatedBlobBackground({ className }: AnimatedBlobBackgroundProps) {
+export function AnimatedBlobBackground({ className, variant = 'dark' }: AnimatedBlobBackgroundProps) {
+    const isLight = variant === 'light';
+    const baseBg = isLight ? '#eff6ff' : '#020817';
+    const blobOpacity = isLight ? 0.12 : 0.3;
+    const overlayGradient = isLight
+        ? `radial-gradient(ellipse at center, transparent 30%, ${baseBg} 75%)`
+        : `radial-gradient(ellipse at center, transparent 30%, ${baseBg} 75%)`;
+
     return (
-        <div className={`absolute inset-0 overflow-hidden ${className ?? ''}`} style={{ backgroundColor: '#020817' }}>
+        <div className={`absolute inset-0 overflow-hidden ${className ?? ''}`} style={{ backgroundColor: baseBg }}>
             <style>{blobKeyframes}</style>
 
             {/* Blob 1 — deep blue, top-left */}
@@ -46,7 +55,7 @@ export function AnimatedBlobBackground({ className }: AnimatedBlobBackgroundProp
                     height: '700px',
                     borderRadius: '50%',
                     backgroundColor: '#1d4ed8',
-                    opacity: 0.3,
+                    opacity: blobOpacity,
                     filter: 'blur(120px)',
                     animation: 'blob1 27s ease-in-out infinite',
                 }}
@@ -62,7 +71,7 @@ export function AnimatedBlobBackground({ className }: AnimatedBlobBackgroundProp
                     height: '800px',
                     borderRadius: '50%',
                     backgroundColor: '#2563eb',
-                    opacity: 0.25,
+                    opacity: blobOpacity * 0.85,
                     filter: 'blur(120px)',
                     animation: 'blob2 33s ease-in-out infinite',
                 }}
@@ -78,7 +87,7 @@ export function AnimatedBlobBackground({ className }: AnimatedBlobBackgroundProp
                     height: '650px',
                     borderRadius: '50%',
                     backgroundColor: '#0ea5e9',
-                    opacity: 0.28,
+                    opacity: blobOpacity * 0.93,
                     filter: 'blur(120px)',
                     animation: 'blob3 20s ease-in-out infinite',
                 }}
@@ -94,7 +103,7 @@ export function AnimatedBlobBackground({ className }: AnimatedBlobBackgroundProp
                     height: '750px',
                     borderRadius: '50%',
                     backgroundColor: '#6366f1',
-                    opacity: 0.35,
+                    opacity: blobOpacity,
                     filter: 'blur(120px)',
                     animation: 'blob4 25s ease-in-out infinite',
                 }}
@@ -105,7 +114,7 @@ export function AnimatedBlobBackground({ className }: AnimatedBlobBackgroundProp
                 style={{
                     position: 'absolute',
                     inset: 0,
-                    background: 'radial-gradient(ellipse at center, transparent 30%, #020817 75%)',
+                    background: overlayGradient,
                 }}
             />
         </div>
