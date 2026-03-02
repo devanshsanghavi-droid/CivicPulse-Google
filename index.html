@@ -8,6 +8,24 @@
   <!-- Add Referrer Policy for OAuth -->
   <meta name="referrer" content="no-referrer-when-downgrade">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          animation: {
+            spotlight: "spotlight 2s ease .75s 1 forwards",
+          },
+          keyframes: {
+            spotlight: {
+              "0%": { opacity: 0, transform: "translate(-72%, -62%) scale(0.5)" },
+              "100%": { opacity: 1, transform: "translate(-50%, -40%) scale(1)" },
+            },
+          },
+        }
+      }
+    }
+  </script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -23,6 +41,10 @@
       content: ''; position: absolute; inset: -2px; border-radius: 50%; background: #2563eb; opacity: 0.4; animation: pulse 2s infinite;
     }
     @keyframes pulse { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(3.5); opacity: 0; } }
+    /* Dark mode transitions */
+    html { transition: background-color 0.3s, color 0.3s; }
+    html.dark { background-color: #0f172a; color: #f1f5f9; }
+    html.dark body { background-color: #0f172a; color: #f1f5f9; }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900 overflow-x-hidden">

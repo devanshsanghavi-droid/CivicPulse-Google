@@ -13,6 +13,7 @@ import AdminDashboardScreen from './screens/AdminDashboardScreen';
 import LoginScreen from './screens/LoginScreen';
 import LocationExplanationScreen from './screens/LocationExplanationScreen';
 import Navigation from './components/Navigation';
+import { ThemeToggle } from './components/ui/theme-toggle';
 
 interface AppContextType {
   user: User | null;
@@ -96,7 +97,7 @@ export default function App() {
     if (currentScreen === 'login') return <LoginScreen />;
     if (currentScreen === 'location-explanation') {
       return (
-        <LocationExplanationScreen 
+        <LocationExplanationScreen
           onConfirm={() => {
             setLocationExplained(true);
             setScreen(pendingScreen || 'feed');
@@ -140,7 +141,7 @@ export default function App() {
 
   const NotificationBell = () => (
     <div className="relative">
-      <button 
+      <button
         onClick={() => {
           setShowNotifs(!showNotifs);
           if (!showNotifs && user) {
@@ -171,8 +172,8 @@ export default function App() {
           <div className="max-h-80 overflow-y-auto no-scrollbar">
             {notifs.length > 0 ? (
               notifs.map(n => (
-                <div 
-                  key={n.id} 
+                <div
+                  key={n.id}
                   onClick={() => handleNotifClick(n)}
                   className={`p-4 border-b border-gray-50 last:border-0 hover:bg-blue-50/50 cursor-pointer transition-colors ${!n.read ? 'bg-blue-50/20' : ''}`}
                 >
@@ -200,20 +201,21 @@ export default function App() {
   );
 
   return (
-    <AppContext.Provider value={{ 
-      user, setUser, currentScreen, previousScreen, setScreen: handleScreenChange, 
+    <AppContext.Provider value={{
+      user, setUser, currentScreen, previousScreen, setScreen: handleScreenChange,
       selectedIssueId, setSelectedIssueId, isAdmin,
       notifs, refreshNotifs
     }}>
-      <div className="flex flex-col min-h-screen pb-20 md:pb-0 md:pt-16">
+      <div className="flex flex-col min-h-screen pb-20 md:pb-0 md:pt-16 dark:bg-slate-900 transition-colors">
         {currentScreen !== 'landing' && currentScreen !== 'login' && currentScreen !== 'location-explanation' && (
           <>
-            <header className="fixed top-0 left-0 right-0 bg-white border-b z-40 md:hidden px-4 py-2.5 flex justify-between items-center">
+            <header className="fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b dark:border-slate-700 z-40 md:hidden px-4 py-2.5 flex justify-between items-center transition-colors">
               <button onClick={handleLogoClick} className="text-lg font-bold text-blue-600">CivicPulse</button>
               <div className="flex items-center gap-2">
+                <ThemeToggle />
                 {user && <NotificationBell />}
                 {!user && (
-                  <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                  <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-slate-800 px-3 py-1.5 rounded-full flex items-center gap-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
                     </svg>
@@ -223,15 +225,16 @@ export default function App() {
               </div>
             </header>
 
-            <header className="fixed top-0 left-0 right-0 bg-white border-b z-40 hidden md:block px-4 py-3">
+            <header className="fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b dark:border-slate-700 z-40 hidden md:block px-4 py-3 transition-colors">
               <div className="max-w-4xl mx-auto flex justify-between items-center">
                 <div className="flex items-center gap-6">
                   <button onClick={handleLogoClick} className="text-xl font-bold text-blue-600">CivicPulse</button>
                   {user && <NotificationBell />}
                 </div>
                 <div className="flex items-center gap-4">
+                  <ThemeToggle />
                   {!user && (
-                    <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors flex items-center gap-1.5">
+                    <button onClick={() => handleScreenChange('login')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 dark:bg-slate-800 px-4 py-2 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
                       </svg>
@@ -245,12 +248,12 @@ export default function App() {
           </>
         )}
 
-        <main className={`flex-1 w-full ${currentScreen !== 'landing' && currentScreen !== 'login' && currentScreen !== 'location-explanation' ? 'max-w-4xl mx-auto mt-14 md:mt-0' : ''}`}>
+        <main className={`flex-1 w-full ${currentScreen !== 'landing' && currentScreen !== 'login' && currentScreen !== 'location-explanation' ? 'max-w-4xl mx-auto mt-14 md:mt-0' : ''} dark:bg-slate-900 transition-colors`}>
           {renderScreen()}
         </main>
 
         {currentScreen !== 'landing' && currentScreen !== 'login' && currentScreen !== 'location-explanation' && (
-          <footer className="fixed bottom-0 left-0 right-0 bg-white border-t z-40 md:hidden">
+          <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t dark:border-slate-700 z-40 md:hidden transition-colors">
             <Navigation />
           </footer>
         )}

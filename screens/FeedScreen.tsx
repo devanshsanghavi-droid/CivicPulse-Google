@@ -4,12 +4,13 @@ import { firestoreService } from '../services/firestoreService';
 import { Issue } from '../types';
 import { CATEGORIES } from '../constants';
 import { useApp } from '../App';
+import { GlowingEffect } from '../components/ui/glowing-effect';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const colors = {
-    open: 'bg-red-100 text-red-700',
-    acknowledged: 'bg-yellow-100 text-yellow-700',
-    resolved: 'bg-green-100 text-green-700'
+    open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    acknowledged: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    resolved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
   };
   return (
     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${colors[status as keyof typeof colors]}`}>
@@ -33,8 +34,8 @@ export default function FeedScreen() {
       try {
         const data = await firestoreService.getIssues(sort, filterCat);
         if (cancelled) return;
-        const filtered = data.filter(i => 
-          i.title.toLowerCase().includes(search.toLowerCase()) || 
+        const filtered = data.filter(i =>
+          i.title.toLowerCase().includes(search.toLowerCase()) ||
           i.description.toLowerCase().includes(search.toLowerCase())
         );
         setIssues(filtered);
@@ -50,16 +51,16 @@ export default function FeedScreen() {
 
   return (
     <div className="p-4 space-y-4 max-w-2xl mx-auto">
-      <div className="sticky top-0 bg-gray-50/95 backdrop-blur py-2 z-10 space-y-3">
+      <div className="sticky top-0 bg-gray-50/95 dark:bg-slate-900/95 backdrop-blur py-2 z-10 space-y-3 transition-colors">
         <div className="relative">
-          <input 
-            type="text" 
-            placeholder="Search city issues..." 
-            className="w-full pl-10 pr-4 py-2 bg-white border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          <input
+            type="text"
+            placeholder="Search city issues..."
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>
@@ -67,31 +68,31 @@ export default function FeedScreen() {
         </div>
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          <button 
+          <button
             onClick={() => setFilterCat(undefined)}
-            className={`px-4 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors font-bold ${!filterCat ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border text-gray-500 hover:bg-gray-50'}`}
+            className={`px-4 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors font-bold ${!filterCat ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
           >
             All Reports
           </button>
           {CATEGORIES.map(cat => (
-            <button 
+            <button
               key={cat.id}
               onClick={() => setFilterCat(cat.id)}
-              className={`px-4 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors font-bold ${filterCat === cat.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border text-gray-500 hover:bg-gray-50'}`}
+              className={`px-4 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors font-bold ${filterCat === cat.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-800 border dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
             >
               {cat.name}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-gray-500 font-bold px-1 uppercase tracking-wider">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400 font-bold px-1 uppercase tracking-wider">
           <span>{issues.length} Active {issues.length === 1 ? 'Report' : 'Reports'}</span>
           <div className="flex items-center gap-1 text-blue-600">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
             </svg>
-            <select 
-              className="bg-transparent cursor-pointer outline-none"
+            <select
+              className="bg-transparent dark:bg-transparent cursor-pointer outline-none"
               value={sort}
               onChange={(e) => setSort(e.target.value)}
             >
@@ -105,14 +106,17 @@ export default function FeedScreen() {
 
       <div className="grid gap-4">
         {issues.map(issue => (
-          <div 
-            key={issue.id} 
+          <div
+            key={issue.id}
             onClick={() => {
               setSelectedIssueId(issue.id);
               setScreen('issue-detail');
             }}
-            className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer"
+            className="relative bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer"
           >
+            {/* Glowing Effect */}
+            <GlowingEffect spread={30} glow={false} disabled={false} proximity={48} inactiveZone={0.1} borderWidth={2} />
+
             {/* Only show image area when photos exist */}
             {issue.photos[0]?.url && (
               <div className="aspect-[16/10] relative">
@@ -138,26 +142,26 @@ export default function FeedScreen() {
                   </span>
                   {!issue.photos[0]?.url && <StatusBadge status={issue.status} />}
                 </div>
-                <span className="text-[10px] text-gray-400 font-bold">
+                <span className="text-[10px] text-gray-400 dark:text-slate-500 font-bold">
                   {new Date(issue.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
               </div>
-              <h3 className="font-bold text-xl leading-snug mb-2 text-gray-900">{issue.title}</h3>
-              <p className="text-gray-500 text-sm line-clamp-2 mb-4 leading-relaxed">{issue.description}</p>
-              
-              <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
+              <h3 className="font-bold text-xl leading-snug mb-2 text-gray-900 dark:text-white">{issue.title}</h3>
+              <p className="text-gray-500 dark:text-slate-400 text-sm line-clamp-2 mb-4 leading-relaxed">{issue.description}</p>
+
+              <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50 dark:border-slate-700">
                 <div className="flex items-center gap-3">
                   {issue.creatorPhotoURL ? (
-                    <img src={issue.creatorPhotoURL} alt={issue.creatorName} className="w-6 h-6 rounded-full object-cover border border-gray-200" />
+                    <img src={issue.creatorPhotoURL} alt={issue.creatorName} className="w-6 h-6 rounded-full object-cover border border-gray-200 dark:border-slate-600" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-gray-400">
+                    <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-gray-400 dark:text-slate-500">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                       </svg>
                     </div>
                   )}
-                  <span className="text-xs font-bold text-gray-600 truncate max-w-[100px]">{issue.creatorName}</span>
-                  <div className="flex items-center gap-1.5 text-gray-900 font-black text-sm ml-auto">
+                  <span className="text-xs font-bold text-gray-600 dark:text-slate-400 truncate max-w-[100px]">{issue.creatorName}</span>
+                  <div className="flex items-center gap-1.5 text-gray-900 dark:text-white font-black text-sm ml-auto">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-blue-600">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904M14.25 9h2.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 10.203 4.167 9.75 5 9.75h1.053c.472 0 .745.556.5.96a8.958 8.958 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z" />
                     </svg>
@@ -169,19 +173,19 @@ export default function FeedScreen() {
           </div>
         ))}
       </div>
-      
+
       {loading && (
         <div className="text-center py-40 flex flex-col items-center">
           <svg className="animate-spin h-8 w-8 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading reports...</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500">Loading reports...</p>
         </div>
       )}
 
       {!loading && issues.length === 0 && (
-        <div className="text-center py-40 text-gray-400 flex flex-col items-center">
+        <div className="text-center py-40 text-gray-400 dark:text-slate-500 flex flex-col items-center">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-12 h-12 mb-4 opacity-20">
             <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
           </svg>

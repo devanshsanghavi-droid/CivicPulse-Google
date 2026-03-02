@@ -31,11 +31,10 @@ const Icons = {
 };
 
 const NavIcon = ({ Icon, label, active, onClick }: { Icon: React.FC, label: string, active: boolean, onClick: () => void }) => (
-  <button 
+  <button
     onClick={onClick}
-    className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 py-2 rounded-lg transition-colors ${
-      active ? 'text-blue-600 md:bg-blue-50' : 'text-gray-500 hover:text-gray-900'
-    }`}
+    className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 px-3 py-2 rounded-lg transition-colors ${active ? 'text-blue-600 md:bg-blue-50 dark:md:bg-slate-800' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white'
+      }`}
   >
     <Icon />
     <span className="text-[10px] md:text-sm font-medium">{label}</span>
@@ -49,19 +48,19 @@ export default function Navigation() {
     <nav className="flex justify-around md:justify-end items-center px-2 py-1 md:gap-2">
       <NavIcon Icon={Icons.Feed} label="Feed" active={currentScreen === 'feed'} onClick={() => setScreen('feed')} />
       <NavIcon Icon={Icons.Map} label="Map" active={currentScreen === 'map'} onClick={() => setScreen('map')} />
-      
+
       {/* Hide Report for non-logged in users */}
       {user && (
         <NavIcon Icon={Icons.Plus} label="Report" active={currentScreen === 'report'} onClick={() => setScreen('report')} />
       )}
-      
+
       <NavIcon Icon={Icons.User} label="Profile" active={currentScreen === 'profile'} onClick={() => setScreen('profile')} />
-      
+
       {isAdmin && (
         <NavIcon Icon={Icons.Admin} label="Admin" active={currentScreen === 'admin'} onClick={() => setScreen('admin')} />
       )}
       {!user && currentScreen !== 'login' && (
-        <button 
+        <button
           onClick={() => setScreen('login')}
           className="ml-2 text-sm bg-blue-600 text-white px-4 py-1 rounded-full font-medium"
         >
